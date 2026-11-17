@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#3F51B5">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>دفتري</title>
+<style>
+:root{--p:#3F51B5;--g:#2e7d32;--r:#c62828;--bg:#fafafa;--line:#e0e0e0}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--bg);font-family:system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Arabic",sans-serif;color:#212121}
+#app{display:flex;flex-direction:column;height:100%;max-width:640px;margin:0 auto;background:#fff;position:relative}
+header{background:var(--p);color:#fff;display:flex;align-items:center;gap:6px;padding:0 8px;min-height:56px;padding-top:env(safe-area-inset-top)}
+header h1{font-size:18px;margin:0;flex:1;font-weight:600;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+header input{flex:1;background:transparent;border:0;border-bottom:1px solid #fff8;color:#fff;font-size:16px;padding:8px 4px;outline:none}
+header input::placeholder{color:#fffa}
+.ib{background:none;border:0;color:inherit;font-size:22px;width:44px;height:44px;border-radius:50%;cursor:pointer}
+.ib:active{background:#fff3}
+main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
+.chips{display:flex;gap:8px;padding:10px 12px;overflow-x:auto}
+.chip{border:1px solid var(--p);color:var(--p);background:#fff;border-radius:18px;padding:6px 14px;font-size:14px;white-space:nowrap;cursor:pointer}
+.chip.on{background:var(--p);color:#fff}
+.row{display:flex;align-items:center;gap:10px;padding:12px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.row:active{background:#f0f0f5}
+.row .plus{font-size:30px;color:var(--p);width:44px;text-align:center;line-height:1;border:0;background:none;cursor:pointer}
+.row .mid{flex:1;min-width:0}
+.row .nm{font-size:17px}
+.row .sub{font-size:12px;color:#757575;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.amt{font-weight:700;font-size:16px;white-space:nowrap}
+.up{color:var(--g)}.dn{color:var(--r)}
+footer.bar{background:var(--p);color:#fff;display:flex;justify-content:space-around;padding:14px 8px;font-weight:700;font-size:16px;padding-bottom:calc(14px + env(safe-area-inset-bottom))}
+.fab{position:absolute;left:16px;bottom:78px;width:56px;height:56px;border-radius:50%;background:var(--p);color:#fff;border:0;font-size:30px;box-shadow:0 3px 8px #0006;cursor:pointer}
+.empty{text-align:center;color:#757575;padding:60px 20px;line-height:1.8}
+.form{padding:16px;display:flex;flex-direction:column;gap:14px}
+.form label{font-size:13px;color:#555;display:block;margin-bottom:4px}
+.form input,.form select{width:100%;font-size:16px;padding:10px;border:1px solid #bbb;border-radius:8px;background:#fff;font-family:inherit}
+.btns{display:flex;gap:12px}
+.btns button{flex:1;padding:14px;font-size:17px;border:0;border-radius:10px;color:#fff;font-weight:700;cursor:pointer}
+.b-up{background:var(--g)}.b-dn{background:var(--r)}
+.photo{max-width:100%;max-height:200px;border-radius:8px;display:block}
+.small{font-size:12px;color:#777}
+.ov{position:fixed;inset:0;background:#0007;z-index:20;display:flex}
+.drawer{background:#fff;width:80%;max-width:320px;height:100%;overflow-y:auto;padding-top:env(safe-area-inset-top)}
+.drawer .it{padding:16px 18px;font-size:16px;border-bottom:1px solid var(--line);cursor:pointer}
+.drawer .it:active{background:#eee}
+.sheet-ov{align-items:flex-end;justify-content:center}
+.sheet{background:#fff;width:100%;max-width:640px;border-radius:16px 16px 0 0;padding:8px 0 calc(8px + env(safe-area-inset-bottom))}
+.sheet .it{padding:16px 20px;font-size:17px;cursor:pointer}
+.sheet .it:active{background:#eee}
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#333;color:#fff;padding:10px 18px;border-radius:20px;font-size:14px;z-index:40;max-width:90%}
+.t-row{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid var(--line);cursor:pointer}
+.t-row .ar{font-size:26px;width:30px;text-align:center}
+.t-row .main{flex:1;min-width:0}
+.t-row .amt2{font-weight:700;font-size:16px}
+.t-row .meta{font-size:12px;color:#757575;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.t-row .run{font-size:13px;color:#555;min-width:64px;text-align:left}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<script>
+'use strict';
+/* ============ أدوات ============ */
+const app = document.getElementById('app');
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => new Intl.NumberFormat('en-US', {maximumFractionDigits: 2}).format(n);
+const fdate = iso => { const [y, m, d] = String(iso).split('-'); return `${d}-${m}-${y}`; };
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0'); };
+const toEn = s => String(s).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).replace(/٫/g, '.').replace(/[,،\s]/g, '');
+function toast(msg) {
+  const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+  document.body.appendChild(t); setTimeout(() => t.remove(), 2600);
+}
+
+/* ============ قاعدة البيانات المحلية (IndexedDB) ============ */
+let db;
+const STORES = ['currencies', 'accounts', 'categories', 'transactions'];
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open('daftari', 1);
+    r.onupgradeneeded = () => { STORES.forEach(n => r.result.createObjectStore(n, {keyPath: 'id', autoIncrement: true})); };
+    r.onsuccess = () => { db = r.result; res(); };
+    r.onerror = () => rej(r.error);
+  });
+}
+const st = (s, mode) => db.transaction(s, mode).objectStore(s);
+const rq = r => new Promise((res, rej) => { r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error); });
+const dbAll = s => rq(st(s, 'readonly').getAll());
+const dbPut = (s, o) => rq(st(s, 'readwrite').put(o));
+const dbDel = (s, id) => rq(st(s, 'readwrite').delete(id));
+const dbClear = s => rq(st(s, 'readwrite').clear());
+
+const S = {currencies: [], accounts: [], categories: [], txs: []};
+async function load() {
+  S.currencies = (await dbAll('currencies')).sort((a, b) => a.sort - b.sort || a.id - b.id);
+  S.accounts = await dbAll('accounts');
+  S.categories = (await dbAll('categories')).sort((a, b) => a.name.localeCompare(b.name, 'ar'));
+  S.txs = await dbAll('transactions');
+}
+async function seed() {
+  if ((await dbAll('currencies')).length) return;
+  const now = new Date().toISOString();
+  const seeds = [['محلي', 'ر.ي', 1], ['دولار', '$', 0], ['سعودي', 'ر.س', 0]];
+  for (let i = 0; i < seeds.length; i++) {
+    await dbPut('currencies', {name: seeds[i][0], symbol: seeds[i][1], is_default: seeds[i][2], sort: i, created_at: now});
+  }
+}
+const cur = id => S.currencies.find(c => c.id == id);
+const acc = id => S.accounts.find(a => a.id == id);
+const defaultCur = () => (S.currencies.find(c => c.is_default) || S.currencies[0] || {}).id;
+
+function sums(curId) {
+  const m = new Map();
+  for (const t of S.txs) {
+    if (t.currency_id != curId) continue;
+    const o = m.get(t.account_id) || {bal: 0, cnt: 0, last: ''};
+    o.bal += t.amount * t.type; o.cnt++; if (t.date > o.last) o.last = t.date;
+    m.set(t.account_id, o);
+  }
+  return m;
+}
+
+/* ============ التنقل ============ */
+const UI = {view: 'home', curId: null, q: '', search: false, accId: null, accCur: null, aq: '', asearch: false, edit: null, addName: '', addCur: null};
+function go(view, patch = {}) {
+  Object.assign(UI, patch, {view});
+  history.pushState({snap: {...UI}}, '');
+  render();
+}
+window.addEventListener('popstate', e => {
+  if (e.state && e.state.snap) Object.assign(UI, e.state.snap); else UI.view = 'home';
+  render();
+});
+async function back() { history.back(); }
+
+function sheet(items) {
+  const ov = document.createElement('div'); ov.className = 'ov sheet-ov';
+  const sh = document.createElement('div'); sh.className = 'sheet';
+  items.forEach(([label, fn]) => {
+    const b = document.createElement('div'); b.className = 'it'; b.textContent = label;
+    b.onclick = () => { ov.remove(); fn(); };
+    sh.appendChild(b);
+  });
+  ov.appendChild(sh); ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
+}
+
+function drawer() {
+  const ov = document.createElement('div'); ov.className = 'ov';
+  const d = document.createElement('div'); d.className = 'drawer';
+  const items = [
+    ['➕  إضافة مبلغ', () => go('add', {edit: null, addName: '', addCur: UI.curId})],
+    ['💱  العملات', () => go('currencies')],
+    ['🏷️  التصنيفات', () => go('categories')],
+    ['⬆️  حفظ نسخة احتياطية', backup],
+    ['⬇️  استرجاع قاعدة البيانات', restore],
+    ['ℹ️  حول البرنامج', () => alert('دفتري\nدفتر ديون محلي: بياناتك محفوظة في هذا الجوال فقط، ولا تُرسل إلى أي مكان.\nاحرص على حفظ نسخة احتياطية من وقت لآخر.')]
+  ];
+  items.forEach(([l, fn]) => { const i = document.createElement('div'); i.className = 'it'; i.textContent = l; i.onclick = () => { ov.remove(); fn(); }; d.appendChild(i); });
+  ov.appendChild(d); ov.onclick = e => { if (e.target === ov) ov.remove(); };
+  document.body.appendChild(ov);
+}
+
+/* ============ الشاشة الرئيسية ============ */
+function chipsHtml(selected, fnName) {
+  if (S.currencies.length < 2) return '';
+  return '<div class="chips">' + S.currencies.map(c => `<div class="chip ${c.id == selected ? 'on' : ''}" onclick="${fnName}(${c.id})">${esc(c.name)}</div>`).join('') + '</div>';
+}
+function setHomeCur(id) { UI.curId = id; render(); }
+
+function renderHome() {
+  if (UI.curId == null || !cur(UI.curId)) UI.curId = defaultCur();
+  const m = sums(UI.curId);
+  let forMe = 0, onMe = 0;
+  for (const o of m.values()) { if (o.bal > 0) forMe += o.bal; else onMe -= o.bal; }
+  const q = UI.q.trim();
+  const rows = [...m.entries()].map(([id, o]) => ({a: acc(id), ...o}))
+    .filter(r => r.a && (!q || r.a.name.includes(q)))
+    .sort((x, y) => x.a.name.localeCompare(y.a.name, 'ar'));
+  app.innerHTML = `
+  <header>
+    <button class="ib" onclick="drawer()">☰</button>
+    ${UI.search ? `<input id="q" placeholder="بحث بالاسم" value="${esc(UI.q)}" oninput="UI.q=this.value;render(true)">` : '<h1>دفتري</h1>'}
+    <button class="ib" onclick="toggleSearch()">${UI.search ? '✕' : '🔍'}</button>
+  </header>
+  <main>
+    ${chipsHtml(UI.curId, 'setHomeCur')}
+    ${rows.length ? rows.map(r => `
+      <div class="row" onclick="openAccount(${r.a.id})">
+        <button class="plus" onclick="event.stopPropagation();addFor(${r.a.id})">+</button>
+        <div class="mid"><div class="nm">${esc(r.a.name)}</div><div class="sub">${r.cnt} عملية</div></div>
+        <div class="amt ${r.bal >= 0 ? 'up' : 'dn'}">${fmt(Math.abs(r.bal))} ${r.bal >= 0 ? '▲' : '▼'}</div>
+      </div>`).join('') : `<div class="empty">لا توجد حسابات بهذه العملة.<br>اضغط (+) لإضافة مبلغ.</div>`}
+  </main>
+  <button class="fab" onclick="go('add',{edit:null,addName:'',addCur:UI.curId})">+</button>
+  <footer class="bar"><span>لك: ${fmt(forMe)}</span><span>عليك: ${fmt(onMe)}</span></footer>`;
+  if (UI.search) { const i = document.getElementById('q'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+}
+function toggleSearch() { UI.search = !UI.search; if (!UI.search) UI.q = ''; render(); }
+function addFor(id) { go('add', {edit: null, addName: acc(id).name, addCur: UI.curId}); }
+function openAccount(id) { go('account', {accId: id, accCur: UI.curId, aq: '', asearch: false}); }
+
+/* ============ كشف الحساب ============ */
+function accTxs(accId, curId) {
+  return S.txs.filter(t => t.account_id == accId && t.currency_id == curId)
+    .sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : a.id - b.id);
+}
+function setAccCur(id) { UI.accCur = id; render(); }
+function renderAccount() {
+  const a = acc(UI.accId);
+  if (!a) { UI.view = 'home'; return renderHome(); }
+  const curs = S.currencies.filter(c => S.txs.some(t => t.account_id == a.id && t.currency_id == c.id));
+  if (!curs.length) { back(); return; }
+  if (!curs.some(c => c.id == UI.accCur)) UI.accCur = curs[0].id;
+  let run = 0;
+  const all = accTxs(a.id, UI.accCur).map(t => { run += t.amount * t.type; return {...t, run}; });
+  const balance = run, q = UI.aq.trim();
+  const shown = (q ? all.filter(t => (t.details || '').includes(q) || t.date.includes(q) || fmt(t.amount).includes(q) || String(t.amount).includes(q) || (catName(t.category_id) || '').includes(q)) : all).reverse();
+  const cname = cur(UI.accCur).name;
+  const chips = curs.length > 1 ? '<div class="chips">' + curs.map(c => `<div class="chip ${c.id == UI.accCur ? 'on' : ''}" onclick="setAccCur(${c.id})">${esc(c.name)}</div>`).join('') + '</div>' : '';
+  app.innerHTML = `
+  <header>
+    <button class="ib" onclick="back()">→</button>
+    ${UI.asearch ? `<input id="aq" placeholder="كلمة، تاريخ، مبلغ" value="${esc(UI.aq)}" oninput="UI.aq=this.value;render(true)">` : `<h1>كشف حساب # ${esc(a.name)}</h1>`}
+    <button class="ib" onclick="UI.asearch=!UI.asearch;if(!UI.asearch)UI.aq='';render()">${UI.asearch ? '✕' : '🔍'}</button>
+    <button class="ib" onclick="accMenu()">⋮</button>
+  </header>
+  <main>
+    ${chips}
+    ${shown.length ? shown.map(t => `
+      <div class="t-row" onclick="txMenu(${t.id})">
+        <div class="ar ${t.type == 1 ? 'up' : 'dn'}">${t.type == 1 ? '▲' : '▼'}</div>
+        <div class="main">
+          <div class="amt2">${fmt(t.amount)} <span class="small">${fdate(t.date)}${t.photo ? ' 📷' : ''}</span></div>
+          <div class="meta">${esc([t.details, t.category_id ? '#' + catName(t.category_id) : ''].filter(Boolean).join('  '))}</div>
+        </div>
+        <div class="run">${fmt(t.run)}</div>
+      </div>`).join('') : '<div class="empty">لا توجد عمليات.</div>'}
+  </main>
+  <button class="fab" onclick="go('add',{edit:null,addName:acc(UI.accId).name,addCur:UI.accCur})">+</button>
+  <footer class="bar"><span>الرصيد: ${fmt(balance)} ${esc(cname)}</span></footer>`;
+  if (UI.asearch) { const i = document.getElementById('aq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+}
+const catName = id => (S.categories.find(c => c.id == id) || {}).name;
+
+function txMenu(id) {
+  const t = S.txs.find(x => x.id == id);
+  const items = [];
+  if (t.photo) items.push(['عرض الصورة', () => showPhoto(t.photo)]);
+  items.push(['تعديل', () => go('add', {edit: id})]);
+  items.push(['حذف', async () => {
+    if (!confirm(`حذف مبلغ ${fmt(t.amount)}؟`)) return;
+    await dbDel('transactions', id); await load();
+    if (!S.txs.some(x => x.account_id == UI.accId)) { back(); } else render();
+  }]);
+  sheet(items);
+}
+function showPhoto(src) {
+  const ov = document.createElement('div'); ov.className = 'ov'; ov.style.alignItems = 'center'; ov.style.justifyContent = 'center';
+  ov.innerHTML = `<img src="${src}" style="max-width:96%;max-height:90%;border-radius:8px">`;
+  ov.onclick = () => ov.remove(); document.body.appendChild(ov);
+}
+function accMenu() {
+  sheet([
+    ['مشاركة كشف الحساب', shareStatement],
+    ['تعديل الاسم', renameAccount],
+    ['إغلاق الرصيد', closeBalance],
+    ['حذف الحساب', deleteAccount]
+  ]);
+}
+function statementText() {
+  const a = acc(UI.accId); let run = 0;
+  const all = accTxs(a.id, UI.accCur).map(t => { run += t.amount * t.type; return {...t, run}; });
+  const lines = [`كشف حساب: ${a.name} (${cur(UI.accCur).name})`];
+  all.forEach(t => lines.push(`${fdate(t.date)} | ${t.type == 1 ? 'له' : 'عليه'} ${fmt(t.amount)} | ${t.details || ''} | الرصيد ${fmt(t.run)}`));
+  lines.push(`الرصيد: ${fmt(run)} ${cur(UI.accCur).name}`);
+  return lines.join('\n');
+}
+async function shareStatement() {
+  const text = statementText();
+  try {
+    if (navigator.share) await navigator.share({text});
+    else { await navigator.clipboard.writeText(text); toast('تم نسخ الكشف'); }
+  } catch (e) { /* أُلغيت المشاركة */ }
+}
+async function renameAccount() {
+  const a = acc(UI.accId);
+  const n = (prompt('الاسم الجديد', a.name) || '').trim();
+  if (!n || n === a.name) return;
+  if (S.accounts.some(x => x.name === n)) { toast('الاسم مستخدم مسبقاً'); return; }
+  a.name = n; await dbPut('accounts', a); await load(); render();
+}
+async function closeBalance() {
+  const all = accTxs(UI.accId, UI.accCur);
+  if (all.length < 2) { toast('لا توجد عمليات كافية للدمج'); return; }
+  const bal = all.reduce((s, t) => s + t.amount * t.type, 0);
+  if (!confirm(`ستُحذف ${all.length} عملية وتُستبدل بعملية واحدة بالرصيد ${fmt(Math.abs(bal))} ${cur(UI.accCur).name}. لا يمكن التراجع.`)) return;
+  for (const t of all) await dbDel('transactions', t.id);
+  if (bal !== 0) await dbPut('transactions', {account_id: UI.accId, currency_id: UI.accCur, category_id: null, amount: Math.abs(bal), type: bal > 0 ? 1 : -1, details: 'رصيد مُغلق', photo: null, date: today(), created_at: new Date().toISOString()});
+  await load(); render();
+}
+async function deleteAccount() {
+  const a = acc(UI.accId);
+  if (!confirm(`سيتم حذف حساب "${a.name}" وكل عملياته بجميع العملات. لا يمكن التراجع.`)) return;
+  for (const t of S.txs.filter(t => t.account_id == a.id)) await dbDel('transactions', t.id);
+  await dbDel('accounts', a.id); await load(); back();
+}
+
+/* ============ إضافة / تعديل عملية ============ */
+function readPhoto(file) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', 0.7));
+    };
+    img.onerror = rej; img.src = url;
+  });
+}
+function renderAdd() {
+  const e = UI.edit ? S.txs.find(t => t.id == UI.edit) : null;
+  const f = {
+    name: e ? (acc(e.account_id) || {}).name : (UI.addName || ''),
+    amount: e ? e.amount : '', details: e ? (e.details || '') : '', date: e ? e.date : today(),
+    cur: e ? e.currency_id : (UI.addCur || defaultCur()), cat: e && e.category_id ? e.category_id : '', photo: e ? e.photo : null
+  };
+  app.innerHTML = `
+  <header><button class="ib" onclick="back()">→</button><h1>${e ? 'تعديل عملية' : 'إضافة مبلغ'}</h1></header>
+  <main><div class="form">
+    <div><label>الاسم</label><input id="f-name" list="names" value="${esc(f.name)}" autocomplete="off"><datalist id="names">${S.accounts.map(a => `<option value="${esc(a.name)}">`).join('')}</datalist></div>
+    <div><label>المبلغ</label><input id="f-amt" inputmode="decimal" value="${esc(f.amount)}"></div>
+    <div><label>التفاصيل</label><input id="f-det" value="${esc(f.details)}"></div>
+    <div><label>التاريخ</label><input id="f-date" type="date" value="${f.date}"></div>
+    <div><label>العملة</label><div class="chips" id="f-curs" style="padding:0;flex-wrap:wrap">${S.currencies.map(c => `<div class="chip ${c.id == f.cur ? 'on' : ''}" data-id="${c.id}">${esc(c.name)}</div>`).join('')}</div></div>
+    <div><label>التصنيف (اختياري)</label><select id="f-cat"><option value="">بدون تصنيف</option>${S.categories.map(c => `<option value="${c.id}" ${c.id == f.cat ? 'selected' : ''}>${esc(c.name)}</option>`).join('')}</select></div>
+    <div>
+      <label>صورة مرفقة (اختياري)</label>
+      <div class="btns" style="margin-bottom:8px">
+        <button type="button" class="chip" id="b-cam" style="flex:1;padding:10px">📷 الكاميرا</button>
+        <button type="button" class="chip" id="b-gal" style="flex:1;padding:10px">🖼️ المعرض</button>
+      </div>
+      <input type="file" id="i-cam" accept="image/*" capture="environment" hidden>
+      <input type="file" id="i-gal" accept="image/*" hidden>
+      <div id="ph"></div>
+    </div>
+    <div class="btns"><button class="b-up" id="s-up">▲ له</button><button class="b-dn" id="s-dn">▼ عليه</button></div>
+  </div></main>`;
+  const showPh = () => {
+    document.getElementById('ph').innerHTML = f.photo ? `<img class="photo" src="${f.photo}"><button class="chip" style="margin-top:6px" id="rm-ph">إزالة الصورة</button>` : '';
+    const r = document.getElementById('rm-ph'); if (r) r.onclick = () => { f.photo = null; showPh(); };
+  };
+  showPh();
+  document.querySelectorAll('#f-curs .chip').forEach(ch => ch.onclick = () => {
+    f.cur = +ch.dataset.id; document.querySelectorAll('#f-curs .chip').forEach(x => x.classList.toggle('on', x === ch));
+  });
+  const onFile = async ev => { const file = ev.target.files[0]; if (!file) return; try { f.photo = await readPhoto(file); showPh(); } catch { toast('تعذّر قراءة الصورة'); } ev.target.value = ''; };
+  document.getElementById('i-cam').onchange = onFile; document.getElementById('i-gal').onchange = onFile;
+  document.getElementById('b-cam').onclick = () => document.getElementById('i-cam').click();
+  document.getElementById('b-gal').onclick = () => document.getElementById('i-gal').click();
+  const save = async type => {
+    const name = document.getElementById('f-name').value.trim();
+    const amount = parseFloat(toEn(document.getElementById('f-amt').value));
+    if (!name || !(amount > 0) || !f.cur) { toast('أدخل الاسم ومبلغاً صحيحاً'); return; }
+    let a = S.accounts.find(x => x.name === name);
+    if (!a) { const id = await dbPut('accounts', {name, created_at: new Date().toISOString()}); a = {id, name}; }
+    const cat = document.getElementById('f-cat').value;
+    const rec = {account_id: a.id, currency_id: f.cur, category_id: cat ? +cat : null, amount, type,
+      details: document.getElementById('f-det').value.trim(), photo: f.photo, date: document.getElementById('f-date').value || today(),
+      created_at: e ? e.created_at : new Date().toISOString()};
+    if (e) rec.id = e.id;
+    await dbPut('transactions', rec); await load();
+    UI.curId = f.cur;
+    back();
+  };
+  document.getElementById('s-up').onclick = () => save(1);
+  document.getElementById('s-dn').onclick = () => save(-1);
+}
+
+/* ============ العملات ============ */
+function renderCurrencies() {
+  app.innerHTML = `
+  <header><button class="ib" onclick="back()">→</button><h1>العملات</h1></header>
+  <main>
+    ${S.currencies.map(c => {
+      const n = new Set(S.txs.filter(t => t.currency_id == c.id).map(t => t.account_id)).size;
+      return `<div class="row" onclick="currencyMenu(${c.id})"><div style="font-size:22px;width:34px">${c.is_default ? '★' : '☆'}</div>
+        <div class="mid"><div class="nm">${esc(c.name)}${c.symbol ? ' (' + esc(c.symbol) + ')' : ''}</div><div class="sub">عدد الحسابات: ${n}</div></div></div>`;
+    }).join('')}
+    <div class="empty small">اضغط على عملة لتعديلها أو جعلها الافتراضية (★) أو حذفها.</div>
+  </main>
+  <button class="fab" style="bottom:24px" onclick="editCurrency()">+</button>`;
+}
+async function editCurrency(id) {
+  const c = id ? cur(id) : null;
+  const name = (prompt('اسم العملة', c ? c.name : '') || '').trim();
+  if (!name) return;
+  const symbol = (prompt('الرمز (اختياري)', c ? (c.symbol || '') : '') || '').trim();
+  if (S.currencies.some(x => x.name === name && (!c || x.id !== c.id))) { toast('اسم العملة مستخدم مسبقاً'); return; }
+  if (c) { c.name = name; c.symbol = symbol; await dbPut('currencies', c); }
+  else { const max = Math.max(0, ...S.currencies.map(x => x.sort || 0)); await dbPut('currencies', {name, symbol, is_default: 0, sort: max + 1, created_at: new Date().toISOString()}); }
+  await load(); render();
+}
+function currencyMenu(id) {
+  sheet([
+    ['جعلها الافتراضية', async () => { for (const c of S.currencies) { c.is_default = c.id == id ? 1 : 0; await dbPut('currencies', c); } await load(); render(); }],
+    ['تعديل', () => editCurrency(id)],
+    ['حذف', async () => {
+      if (S.txs.some(t => t.currency_id == id)) { toast('لا يمكن حذف عملة عليها عمليات'); return; }
+      if (S.currencies.length < 2) { toast('يجب أن تبقى عملة واحدة على الأقل'); return; }
+      if (!confirm('حذف هذه العملة؟')) return;
+      await dbDel('currencies', id); await load(); render();
+    }]
+  ]);
+}
+
+/* ============ التصنيفات ============ */
+function renderCategories() {
+  app.innerHTML = `
+  <header><button class="ib" onclick="back()">→</button><h1>التصنيفات</h1></header>
+  <main>${S.categories.length ? S.categories.map(c => `<div class="row" onclick="categoryMenu(${c.id})"><div class="mid"><div class="nm">${esc(c.name)}</div></div></div>`).join('') : '<div class="empty">لا توجد تصنيفات.<br>اضغط (+) لإضافة تصنيف.</div>'}</main>
+  <button class="fab" style="bottom:24px" onclick="editCategory()">+</button>`;
+}
+async function editCategory(id) {
+  const c = id ? S.categories.find(x => x.id == id) : null;
+  const name = (prompt('اسم التصنيف', c ? c.name : '') || '').trim();
+  if (!name) return;
+  if (S.categories.some(x => x.name === name && (!c || x.id !== c.id))) { toast('التصنيف موجود مسبقاً'); return; }
+  if (c) { c.name = name; await dbPut('categories', c); } else await dbPut('categories', {name});
+  await load(); render();
+}
+function categoryMenu(id) {
+  sheet([
+    ['تعديل', () => editCategory(id)],
+    ['حذف', async () => {
+      if (!confirm('حذف التصنيف؟ ستبقى العمليات لكن بدون تصنيف.')) return;
+      for (const t of S.txs.filter(t => t.category_id == id)) { t.category_id = null; await dbPut('transactions', t); }
+      await dbDel('categories', id); await load(); render();
+    }]
+  ]);
+}
+
+/* ============ النسخ الاحتياطي والاسترجاع ============ */
+async function backup() {
+  const data = {app: 'daftari', version: 1, exported_at: new Date().toISOString(),
+    currencies: S.currencies, accounts: S.accounts, categories: S.categories, transactions: S.txs};
+  const blob = new Blob([JSON.stringify(data)], {type: 'application/json'});
+  const name = `daftari_${today()}.json`;
+  const file = new File([blob], name, {type: 'application/json'});
+  try {
+    if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: 'نسخة احتياطية - دفتري'}); return; }
+  } catch (e) { if (e && e.name === 'AbortError') return; }
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000); toast('تم حفظ النسخة الاحتياطية');
+}
+function restore() {
+  if (!confirm('سيتم استبدال كل البيانات الحالية بالنسخة المختارة. يُفضّل حفظ نسخة احتياطية أولاً. متابعة؟')) return;
+  const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
+  i.onchange = async () => {
+    const f = i.files[0]; if (!f) return;
+    try {
+      const d = JSON.parse(await f.text());
+      if (d.app !== 'daftari' || !Array.isArray(d.transactions)) throw new Error('bad');
+      const safety = {currencies: S.currencies, accounts: S.accounts, categories: S.categories, transactions: S.txs};
+      try { localStorage.setItem('daftari_before_restore', JSON.stringify(safety)); } catch (e) { /* قد تكون الصور كبيرة */ }
+      for (const s of STORES) await dbClear(s);
+      for (const s of STORES) for (const o of (d[s] || [])) await dbPut(s, o);
+      await seed(); await load(); UI.curId = null; go('home'); toast('تم استرجاع البيانات');
+    } catch (e) { toast('ملف غير صالح'); }
+  };
+  i.click();
+}
+
+/* ============ التشغيل ============ */
+function render(keepFocus) {
+  switch (UI.view) {
+    case 'account': return renderAccount();
+    case 'add': return renderAdd();
+    case 'currencies': return renderCurrencies();
+    case 'categories': return renderCategories();
+    default: return renderHome();
+  }
+}
+(async function init() {
+  try {
+    await openDB(); await seed(); await load();
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+    history.replaceState({snap: {...UI}}, '');
+    render();
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  } catch (e) {
+    app.innerHTML = '<div class="empty">تعذّر فتح التخزين المحلي في هذا المتصفح.<br>لا تستخدم وضع التصفح الخفي.</div>';
+  }
+})();
+</script>
+</body>
+</html>
