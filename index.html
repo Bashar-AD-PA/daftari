@@ -57,6 +57,23 @@ footer.bar{background:var(--p);color:#fff;display:flex;justify-content:space-aro
 .t-row .amt2{font-weight:700;font-size:16px}
 .t-row .meta{font-size:12px;color:#757575;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .t-row .run{font-size:13px;color:#555;min-width:64px;text-align:left}
+.scrollx{overflow-x:auto}
+.rtable{width:100%;border-collapse:collapse;font-size:13.5px}
+.rtable th{position:sticky;top:0;background:#eef0fb;color:#333;font-weight:700;padding:10px 8px;text-align:right;cursor:pointer;white-space:nowrap;border-bottom:2px solid var(--p);user-select:none}
+.rtable th.num,.rtable td.num{text-align:left}
+.rtable th .arw{font-size:10px;opacity:.65;margin-left:3px}
+.rtable td{padding:9px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.rtable tr:nth-child(even) td{background:#fafbff}
+.rtable tr:active td{background:#eef0fb}
+.rtable td.name{white-space:normal;font-weight:600}
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:11px;font-weight:700}
+.badge.g{background:#e6f4ea;color:var(--g)}
+.badge.r{background:#fdeaea;color:var(--r)}
+.badge.n{background:#eee;color:#666}
+.rcard{margin:12px;padding:16px;border-radius:14px;background:linear-gradient(135deg,var(--p),#5c6bc0);color:#fff;box-shadow:0 2px 8px #3f51b540}
+.rcard .lbl{font-size:12px;opacity:.85}
+.rcard .val{font-size:24px;font-weight:800;margin-top:2px}
+mark{background:#fdeaea;color:var(--r);padding:0 1px;border-radius:2px}
 </style>
 </head>
 <body>
@@ -124,7 +141,9 @@ function sums(curId) {
 }
 
 /* ============ التنقل ============ */
-const UI = {view: 'home', curId: null, q: '', search: false, accId: null, accCur: null, aq: '', asearch: false, edit: null, addName: '', addCur: null};
+const UI = {view: 'home', curId: null, q: '', search: false, accId: null, accCur: null, aq: '', asearch: false, edit: null, addName: '', addCur: null,
+  reportType: 'totals', reportCur: null, rq: '',
+  reportSort: {totals: {key: 'bal', dir: 'desc'}, monthly: {key: 'month', dir: 'desc'}, details: {key: 'date', dir: 'desc'}, categories: {key: 'net', dir: 'desc'}}};
 function go(view, patch = {}) {
   Object.assign(UI, patch, {view});
   history.pushState({snap: {...UI}}, '');
@@ -155,6 +174,10 @@ function drawer() {
     ['➕  إضافة مبلغ', () => go('add', {edit: null, addName: '', addCur: UI.curId})],
     ['💱  العملات', () => go('currencies')],
     ['🏷️  التصنيفات', () => go('categories')],
+    ['📊  تقرير: إجمالي المبالغ', () => go('reports', {reportType: 'totals', reportCur: UI.curId})],
+    ['📊  تقرير: تفاصيل كل المبالغ', () => go('reports', {reportType: 'details', reportCur: UI.curId})],
+    ['📊  تقرير: إجمالي شهرياً', () => go('reports', {reportType: 'monthly', reportCur: UI.curId})],
+    ['📊  تقرير: إجمالي التصنيفات', () => go('reports', {reportType: 'categories', reportCur: UI.curId})],
     ['⬆️  حفظ نسخة احتياطية', backup],
     ['⬇️  استرجاع قاعدة البيانات', restore],
     ['ℹ️  حول البرنامج', () => alert('دفتري\nدفتر ديون محلي: بياناتك محفوظة في هذا الجوال فقط، ولا تُرسل إلى أي مكان.\nاحرص على حفظ نسخة احتياطية من وقت لآخر.')]
@@ -444,6 +467,164 @@ function categoryMenu(id) {
   ]);
 }
 
+/* ============ التقارير ============ */
+const AR_MONTHS = ['يناير', 'فبراير', 'مارس', 'أبريل', 'مايو', 'يونيو', 'يوليو', 'أغسطس', 'سبتمبر', 'أكتوبر', 'نوفمبر', 'ديسمبر'];
+function monthLabel(key) { const [y, m] = key.split('-'); return `${AR_MONTHS[+m - 1]} ${y}`; }
+function daysSince(dateStr) {
+  if (!dateStr) return 0;
+  const a = new Date(dateStr + 'T00:00:00'), b = new Date(today() + 'T00:00:00');
+  return Math.max(0, Math.round((b - a) / 86400000));
+}
+function currencyNetBalance(curId) {
+  let s = 0; for (const o of sums(curId).values()) s += o.bal; return s;
+}
+function hl(text, q) {
+  text = String(text ?? '');
+  if (!q) return esc(text);
+  const i = text.indexOf(q);
+  if (i === -1) return esc(text);
+  return esc(text.slice(0, i)) + '<mark>' + esc(text.slice(i, i + q.length)) + '</mark>' + esc(text.slice(i + q.length));
+}
+function sortRows(rows, key, dir, type) {
+  return [...rows].sort((a, b) => {
+    if (type === 'text') { const c = String(a[key] || '').localeCompare(String(b[key] || ''), 'ar'); return dir === 'asc' ? c : -c; }
+    const x = Number(a[key]) || 0, y = Number(b[key]) || 0;
+    return dir === 'asc' ? x - y : y - x;
+  });
+}
+function setReportType(t) { UI.reportType = t; render(); }
+function setReportCur(id) { UI.reportCur = id; render(); }
+function sortReport(key) {
+  const s = UI.reportSort[UI.reportType];
+  if (s.key === key) s.dir = s.dir === 'asc' ? 'desc' : 'asc'; else { s.key = key; s.dir = 'desc'; }
+  render();
+}
+function computeTotals(curId) {
+  const m = sums(curId), rows = [];
+  for (const [id, o] of m.entries()) { const a = acc(id); if (a) rows.push({id, name: a.name, cnt: o.cnt, last: o.last, days: daysSince(o.last), bal: o.bal}); }
+  return rows;
+}
+function computeMonthly(curId) {
+  const list = S.txs.filter(t => t.currency_id == curId).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  const map = new Map();
+  for (const t of list) {
+    const k = t.date.slice(0, 7);
+    const o = map.get(k) || {month: k, cnt: 0, net: 0};
+    o.cnt++; o.net += t.amount * t.type;
+    map.set(k, o);
+  }
+  let run = 0;
+  return [...map.keys()].sort().map(k => { const o = map.get(k); run += o.net; return {month: k, label: monthLabel(k), cnt: o.cnt, net: o.net, balance: run}; });
+}
+function computeDetails(curId, q) {
+  let rows = S.txs.filter(t => t.currency_id == curId).map(t => ({
+    id: t.id, date: t.date, name: (acc(t.account_id) || {}).name || '', details: t.details || '',
+    cat: t.category_id ? (catName(t.category_id) || '') : '', amount: t.amount, type: t.type
+  }));
+  const q2 = (q || '').trim();
+  if (q2) rows = rows.filter(r => r.name.includes(q2) || r.details.includes(q2) || r.date.includes(q2) || r.cat.includes(q2) || fmt(r.amount).includes(q2) || String(r.amount).includes(q2));
+  return rows;
+}
+function computeCategories(curId) {
+  const map = new Map();
+  const ensure = key => { if (!map.has(key)) map.set(key, {id: key, name: key === '_none' ? 'بدون تصنيف' : (catName(key) || 'بدون تصنيف'), cnt: 0, forMe: 0, onMe: 0}); return map.get(key); };
+  for (const t of S.txs) {
+    if (t.currency_id != curId) continue;
+    const o = ensure(t.category_id || '_none');
+    o.cnt++; if (t.type == 1) o.forMe += t.amount; else o.onMe += t.amount;
+  }
+  return [...map.values()].map(o => ({...o, net: o.forMe - o.onMe}));
+}
+function reportCurChips(selected) {
+  if (S.currencies.length < 2) return '';
+  return '<div class="chips">' + S.currencies.map(c => `<div class="chip ${c.id == selected ? 'on' : ''}" onclick="setReportCur(${c.id})">${esc(c.name)}</div>`).join('') + '</div>';
+}
+function renderReports() {
+  if (UI.reportCur == null || !cur(UI.reportCur)) UI.reportCur = (UI.curId && cur(UI.curId)) ? UI.curId : defaultCur();
+  const curId = UI.reportCur, type = UI.reportType || 'totals';
+  const sort = UI.reportSort[type];
+  const arrow = col => sort.key === col ? `<span class="arw">${sort.dir === 'asc' ? '▲' : '▼'}</span>` : '';
+  const empty = '<div class="empty">لا توجد بيانات لهذا التقرير بهذه العملة.</div>';
+  const rcard = (lbl, val, sub) => `<div class="rcard"><div class="lbl">${esc(lbl)}</div><div class="val">${esc(val)}</div><div class="lbl" style="margin-top:4px">${esc(sub)}</div></div>`;
+  const types = [['totals', 'إجمالي المبالغ'], ['details', 'تفاصيل كل المبالغ'], ['monthly', 'إجمالي شهرياً'], ['categories', 'إجمالي التصنيفات']];
+  const cname = cur(curId).name;
+  let bodyHtml = '', cardHtml = '';
+
+  if (type === 'totals') {
+    let rows = sortRows(computeTotals(curId), sort.key, sort.dir, sort.key === 'name' ? 'text' : 'num');
+    cardHtml = rcard('إجمالي الأرصدة', fmt(currencyNetBalance(curId)) + ' ' + cname, rows.length + ' حساب');
+    bodyHtml = rows.length ? `<div class="scrollx"><table class="rtable"><thead><tr>
+        <th onclick="sortReport('name')">الاسم ${arrow('name')}</th>
+        <th class="num" onclick="sortReport('cnt')">العمليات ${arrow('cnt')}</th>
+        <th class="num" onclick="sortReport('days')">عدد الأيام ${arrow('days')}</th>
+        <th class="num" onclick="sortReport('bal')">الرصيد ${arrow('bal')}</th>
+      </tr></thead><tbody>${rows.map(r => `<tr onclick="openAccount(${r.id})">
+        <td class="name">${esc(r.name)}</td>
+        <td class="num">${r.cnt}</td>
+        <td class="num"><span class="badge ${r.days === 0 ? 'g' : (r.days > 30 ? 'r' : 'n')}">${r.days}</span></td>
+        <td class="num ${r.bal >= 0 ? 'up' : 'dn'}">${fmt(Math.abs(r.bal))} ${r.bal >= 0 ? '▲' : '▼'}</td>
+      </tr>`).join('')}</tbody></table></div>` : empty;
+  } else if (type === 'monthly') {
+    let rows = sortRows(computeMonthly(curId), sort.key, sort.dir, sort.key === 'month' ? 'text' : 'num');
+    cardHtml = rcard('الرصيد الحالي', fmt(currencyNetBalance(curId)) + ' ' + cname, rows.length + ' شهر مسجّل');
+    bodyHtml = rows.length ? `<div class="scrollx"><table class="rtable"><thead><tr>
+        <th onclick="sortReport('month')">الشهر ${arrow('month')}</th>
+        <th class="num" onclick="sortReport('cnt')">العمليات ${arrow('cnt')}</th>
+        <th class="num" onclick="sortReport('net')">صافي التغيّر ${arrow('net')}</th>
+        <th class="num" onclick="sortReport('balance')">الرصيد التراكمي ${arrow('balance')}</th>
+      </tr></thead><tbody>${rows.map(r => `<tr>
+        <td class="name">${esc(r.label)}</td>
+        <td class="num">${r.cnt}</td>
+        <td class="num ${r.net >= 0 ? 'up' : 'dn'}">${r.net >= 0 ? '+' : '−'}${fmt(Math.abs(r.net))}</td>
+        <td class="num ${r.balance >= 0 ? 'up' : 'dn'}">${fmt(Math.abs(r.balance))} ${r.balance >= 0 ? '▲' : '▼'}</td>
+      </tr>`).join('')}</tbody></table></div>` : empty;
+  } else if (type === 'details') {
+    let rows = sortRows(computeDetails(curId, UI.rq), sort.key, sort.dir, ['date', 'name', 'details', 'cat'].includes(sort.key) ? 'text' : 'num');
+    cardHtml = rcard('عدد العمليات', String(rows.length), 'بعملة ' + cname);
+    bodyHtml = rows.length ? `<div class="scrollx"><table class="rtable"><thead><tr>
+        <th onclick="sortReport('date')">التاريخ ${arrow('date')}</th>
+        <th onclick="sortReport('name')">الاسم ${arrow('name')}</th>
+        <th onclick="sortReport('details')">التفاصيل ${arrow('details')}</th>
+        <th onclick="sortReport('cat')">التصنيف ${arrow('cat')}</th>
+        <th class="num" onclick="sortReport('amount')">المبلغ ${arrow('amount')}</th>
+      </tr></thead><tbody>${rows.map(r => `<tr onclick="go('add',{edit:${r.id}})">
+        <td>${fdate(r.date)}</td>
+        <td class="name">${hl(r.name, UI.rq)}</td>
+        <td>${hl(r.details, UI.rq)}</td>
+        <td>${r.cat ? esc(r.cat) : '—'}</td>
+        <td class="num ${r.type == 1 ? 'up' : 'dn'}">${fmt(r.amount)} ${r.type == 1 ? '▲' : '▼'}</td>
+      </tr>`).join('')}</tbody></table></div>` : empty;
+  } else {
+    let rows = sortRows(computeCategories(curId), sort.key, sort.dir, sort.key === 'name' ? 'text' : 'num');
+    const totalNet = rows.reduce((s, r) => s + r.net, 0);
+    cardHtml = rcard('صافي كل التصنيفات', fmt(totalNet) + ' ' + cname, rows.length + ' تصنيف');
+    bodyHtml = rows.length ? `<div class="scrollx"><table class="rtable"><thead><tr>
+        <th onclick="sortReport('name')">التصنيف ${arrow('name')}</th>
+        <th class="num" onclick="sortReport('cnt')">العمليات ${arrow('cnt')}</th>
+        <th class="num" onclick="sortReport('forMe')">له ${arrow('forMe')}</th>
+        <th class="num" onclick="sortReport('onMe')">عليه ${arrow('onMe')}</th>
+        <th class="num" onclick="sortReport('net')">الصافي ${arrow('net')}</th>
+      </tr></thead><tbody>${rows.map(r => `<tr>
+        <td class="name">${esc(r.name)}</td>
+        <td class="num">${r.cnt}</td>
+        <td class="num up">${fmt(r.forMe)}</td>
+        <td class="num dn">${fmt(r.onMe)}</td>
+        <td class="num ${r.net >= 0 ? 'up' : 'dn'}">${fmt(Math.abs(r.net))} ${r.net >= 0 ? '▲' : '▼'}</td>
+      </tr>`).join('')}</tbody></table></div>` : empty;
+  }
+
+  app.innerHTML = `
+  <header><button class="ib" onclick="back()">→</button><h1>التقارير</h1></header>
+  <main>
+    <div class="chips">${types.map(([k, l]) => `<div class="chip ${k === type ? 'on' : ''}" onclick="setReportType('${k}')">${esc(l)}</div>`).join('')}</div>
+    ${reportCurChips(curId)}
+    ${type === 'details' ? `<div style="padding:0 12px 6px"><input id="rq" placeholder="بحث: اسم، تفاصيل، تاريخ، مبلغ، تصنيف" value="${esc(UI.rq || '')}" oninput="UI.rq=this.value;render(true)" style="width:100%;padding:10px;border:1px solid #bbb;border-radius:8px;font-size:15px"></div>` : ''}
+    ${cardHtml}
+    ${bodyHtml}
+  </main>`;
+  if (type === 'details') { const i = document.getElementById('rq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+}
+
 /* ============ النسخ الاحتياطي والاسترجاع ============ */
 async function backup() {
   const data = {app: 'daftari', version: 1, exported_at: new Date().toISOString(),
@@ -482,6 +663,7 @@ function render(keepFocus) {
     case 'add': return renderAdd();
     case 'currencies': return renderCurrencies();
     case 'categories': return renderCategories();
+    case 'reports': return renderReports();
     default: return renderHome();
   }
 }
