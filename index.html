@@ -74,6 +74,33 @@ footer.bar{background:var(--p);color:#fff;display:flex;justify-content:space-aro
 .rcard .lbl{font-size:12px;opacity:.85}
 .rcard .val{font-size:24px;font-weight:800;margin-top:2px}
 mark{background:#fdeaea;color:var(--r);padding:0 1px;border-radius:2px}
+#print-area{display:none}
+@media print{
+  body *{visibility:hidden}
+  #print-area,#print-area *{visibility:visible}
+  #print-area{display:block;position:absolute;inset:0;background:#fff;color:#161616;font-family:Arial,"Noto Naskh Arabic",sans-serif;direction:rtl;padding:0}
+  @page{margin:14mm 12mm}
+}
+.phead{display:flex;align-items:flex-start;justify-content:space-between;border-bottom:3px solid #3F51B5;padding-bottom:12px;margin-bottom:18px}
+.phead .logo{font-size:23px;font-weight:800;color:#3F51B5}
+.phead .logo span{display:block;font-size:11px;font-weight:400;color:#777;margin-top:2px}
+.phead .meta{font-size:11px;color:#666;text-align:left;line-height:1.7}
+.ptitle{font-size:19px;font-weight:800;margin:0 0 4px}
+.psub{font-size:12px;color:#666;margin-bottom:14px}
+.pstats{display:flex;gap:10px;flex-wrap:wrap;margin:0 0 20px}
+.pstat{flex:1;min-width:130px;border:1px solid #ddd;border-radius:10px;padding:12px 14px;background:#f6f7fc}
+.pstat .l{font-size:10.5px;color:#666}
+.pstat .v{font-size:17px;font-weight:800;margin-top:3px;color:#222}
+.ptable{width:100%;border-collapse:collapse;margin-bottom:22px;font-size:12px}
+.ptable th{background:#3F51B5;color:#fff;padding:8px 9px;text-align:right;font-weight:700}
+.ptable th.num,.ptable td.num{text-align:left}
+.ptable td{padding:7px 9px;border-bottom:1px solid #e6e6ee}
+.ptable tr:nth-child(even) td{background:#f7f8fc}
+.ptable tfoot td{font-weight:800;border-top:2px solid #3F51B5;background:#eef0fb;padding:9px}
+.psection{margin-bottom:28px;page-break-inside:avoid}
+.psection .stitle{font-size:14.5px;font-weight:800;color:#3F51B5;margin-bottom:8px;border-right:4px solid #3F51B5;padding-right:8px}
+.pfoot{margin-top:26px;font-size:10px;color:#999;text-align:center;border-top:1px solid #eee;padding-top:10px}
+.pup{color:#2e7d32}.pdn{color:#c62828}
 </style>
 </head>
 <body>
@@ -288,6 +315,7 @@ function showPhoto(src) {
 }
 function accMenu() {
   sheet([
+    ['🖨️ تصدير PDF (كل العملات والتفاصيل)', () => printAccountStatement(UI.accId)],
     ['مشاركة كشف الحساب', shareStatement],
     ['تعديل الاسم', renameAccount],
     ['إغلاق الرصيد', closeBalance],
@@ -614,7 +642,7 @@ function renderReports() {
   }
 
   app.innerHTML = `
-  <header><button class="ib" onclick="back()">→</button><h1>التقارير</h1></header>
+  <header><button class="ib" onclick="back()">→</button><h1>التقارير</h1><button class="ib" onclick="printCurrentReport()" title="تصدير PDF">🖨️</button></header>
   <main>
     <div class="chips">${types.map(([k, l]) => `<div class="chip ${k === type ? 'on' : ''}" onclick="setReportType('${k}')">${esc(l)}</div>`).join('')}</div>
     ${reportCurChips(curId)}
@@ -623,6 +651,98 @@ function renderReports() {
     ${bodyHtml}
   </main>`;
   if (type === 'details') { const i = document.getElementById('rq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
+}
+
+/* ============ تصدير PDF (عبر طباعة المتصفح) ============ */
+function nowStr() {
+  const d = new Date();
+  return fdate(today()) + ' — ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+}
+function letterhead(title, sub) {
+  return `<div class="phead"><div class="logo">📒 دفتري<span>دفتر ديون محلي</span></div><div class="meta">تاريخ الإصدار<br>${nowStr()}</div></div>
+    <div class="ptitle">${esc(title)}</div>${sub ? `<div class="psub">${esc(sub)}</div>` : ''}`;
+}
+function statBox(items) {
+  return `<div class="pstats">${items.map(([l, v]) => `<div class="pstat"><div class="l">${esc(l)}</div><div class="v">${esc(v)}</div></div>`).join('')}</div>`;
+}
+function doPrint(docTitle, bodyHtml) {
+  let area = document.getElementById('print-area');
+  if (!area) { area = document.createElement('div'); area.id = 'print-area'; document.body.appendChild(area); }
+  area.innerHTML = bodyHtml + `<div class="pfoot">دفتري — دفتر ديون محلي · بياناتك محفوظة في جهازك فقط · ${nowStr()}</div>`;
+  const prevTitle = document.title;
+  document.title = docTitle;
+  const restore = () => { document.title = prevTitle; window.removeEventListener('afterprint', restore); };
+  window.addEventListener('afterprint', restore);
+  setTimeout(() => window.print(), 60);
+}
+function printAccountStatement(accId) {
+  const a = acc(accId);
+  if (!a) { toast('تعذّر العثور على الحساب'); return; }
+  const curs = S.currencies.filter(c => S.txs.some(t => t.account_id == a.id && t.currency_id == c.id));
+  if (!curs.length) { toast('لا توجد عمليات لهذا الحساب'); return; }
+  const overview = curs.map(c => {
+    let run = 0; accTxs(a.id, c.id).forEach(t => run += t.amount * t.type);
+    return [c.name, `${fmt(Math.abs(run))} ${run >= 0 ? '▲ لك' : '▼ عليك'}`];
+  });
+  let body = letterhead('كشف حساب: ' + a.name, 'تقرير شامل بجميع العملات والتفاصيل');
+  body += statBox(overview);
+  curs.forEach(c => {
+    let run = 0;
+    const rows = accTxs(a.id, c.id).map(t => { run += t.amount * t.type; return {...t, run}; });
+    body += `<div class="psection"><div class="stitle">عملة: ${esc(c.name)} — ${rows.length} عملية</div>
+      <table class="ptable"><thead><tr>
+        <th>التاريخ</th><th>التفاصيل</th><th>التصنيف</th><th class="num">النوع</th><th class="num">المبلغ</th><th class="num">الرصيد</th>
+      </tr></thead><tbody>${rows.map(t => `<tr>
+        <td>${fdate(t.date)}</td>
+        <td>${esc(t.details || '—')}</td>
+        <td>${t.category_id ? esc(catName(t.category_id) || '—') : '—'}</td>
+        <td class="num ${t.type == 1 ? 'pup' : 'pdn'}">${t.type == 1 ? 'له ▲' : 'عليه ▼'}</td>
+        <td class="num">${fmt(t.amount)}</td>
+        <td class="num ${t.run >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(t.run))}</td>
+      </tr>`).join('')}</tbody>
+      <tfoot><tr><td colspan="5">الرصيد النهائي (${esc(c.name)})</td><td class="num ${run >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(run))} ${run >= 0 ? '▲' : '▼'}</td></tr></tfoot>
+      </table></div>`;
+  });
+  doPrint('كشف حساب - ' + a.name + ' - دفتري', body);
+}
+const REPORT_LABELS = {totals: 'إجمالي المبالغ', monthly: 'إجمالي شهرياً', details: 'تفاصيل كل المبالغ', categories: 'إجمالي التصنيفات'};
+function printCurrentReport() {
+  const curId = UI.reportCur, type = UI.reportType, sort = UI.reportSort[type], cname = cur(curId).name;
+  let body = letterhead('تقرير: ' + REPORT_LABELS[type], 'عملة: ' + cname);
+
+  if (type === 'totals') {
+    const rows = sortRows(computeTotals(curId), sort.key, sort.dir, sort.key === 'name' ? 'text' : 'num');
+    body += statBox([['إجمالي الأرصدة', fmt(currencyNetBalance(curId)) + ' ' + cname], ['عدد الحسابات', String(rows.length)]]);
+    body += rows.length ? `<table class="ptable"><thead><tr><th>الاسم</th><th class="num">العمليات</th><th class="num">أيام منذ آخر عملية</th><th class="num">الرصيد</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td class="num">${r.cnt}</td><td class="num">${r.days}</td>
+        <td class="num ${r.bal >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(r.bal))} ${r.bal >= 0 ? '▲' : '▼'}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="psub">لا توجد بيانات.</div>';
+  } else if (type === 'monthly') {
+    const rows = sortRows(computeMonthly(curId), sort.key, sort.dir, sort.key === 'month' ? 'text' : 'num');
+    body += statBox([['الرصيد الحالي', fmt(currencyNetBalance(curId)) + ' ' + cname], ['عدد الأشهر', String(rows.length)]]);
+    body += rows.length ? `<table class="ptable"><thead><tr><th>الشهر</th><th class="num">العمليات</th><th class="num">صافي التغيّر</th><th class="num">الرصيد التراكمي</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${esc(r.label)}</td><td class="num">${r.cnt}</td>
+        <td class="num ${r.net >= 0 ? 'pup' : 'pdn'}">${r.net >= 0 ? '+' : '−'}${fmt(Math.abs(r.net))}</td>
+        <td class="num ${r.balance >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(r.balance))} ${r.balance >= 0 ? '▲' : '▼'}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="psub">لا توجد بيانات.</div>';
+  } else if (type === 'details') {
+    const rows = sortRows(computeDetails(curId, UI.rq), sort.key, sort.dir, ['date', 'name', 'details', 'cat'].includes(sort.key) ? 'text' : 'num');
+    body += statBox([['عدد العمليات', String(rows.length)], ['عملة', cname]]);
+    if (UI.rq) body += `<div class="psub">عامل التصفية: "${esc(UI.rq)}"</div>`;
+    body += rows.length ? `<table class="ptable"><thead><tr><th>التاريخ</th><th>الاسم</th><th>التفاصيل</th><th>التصنيف</th><th class="num">المبلغ</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${fdate(r.date)}</td><td>${esc(r.name)}</td><td>${esc(r.details || '—')}</td><td>${r.cat ? esc(r.cat) : '—'}</td>
+        <td class="num ${r.type == 1 ? 'pup' : 'pdn'}">${fmt(r.amount)} ${r.type == 1 ? '▲' : '▼'}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="psub">لا توجد بيانات.</div>';
+  } else {
+    const rows = sortRows(computeCategories(curId), sort.key, sort.dir, sort.key === 'name' ? 'text' : 'num');
+    const totalNet = rows.reduce((s, r) => s + r.net, 0);
+    body += statBox([['صافي كل التصنيفات', fmt(totalNet) + ' ' + cname], ['عدد التصنيفات', String(rows.length)]]);
+    body += rows.length ? `<table class="ptable"><thead><tr><th>التصنيف</th><th class="num">العمليات</th><th class="num">له</th><th class="num">عليه</th><th class="num">الصافي</th></tr></thead>
+      <tbody>${rows.map(r => `<tr><td>${esc(r.name)}</td><td class="num">${r.cnt}</td><td class="num pup">${fmt(r.forMe)}</td><td class="num pdn">${fmt(r.onMe)}</td>
+        <td class="num ${r.net >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(r.net))} ${r.net >= 0 ? '▲' : '▼'}</td></tr>`).join('')}</tbody></table>`
+      : '<div class="psub">لا توجد بيانات.</div>';
+  }
+  doPrint('تقرير ' + REPORT_LABELS[type] + ' - دفتري', body);
 }
 
 /* ============ النسخ الاحتياطي والاسترجاع ============ */
