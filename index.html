@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#3F51B5">
+<meta name="theme-color" content="#16324F">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>تطبيق بشار المحاسبي</title>
+<title>دفترِي | نظام محاسبي محلي</title>
 <style>
 :root{--p:#3F51B5;--g:#2e7d32;--r:#c62828;--bg:#fafafa;--line:#e0e0e0}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -118,6 +118,285 @@ mark{background:#fdeaea;color:var(--r);padding:0 1px;border-radius:2px}
 #lock-screen .lk-key{background:#ffffff22;color:#fff;border-color:#ffffff33}
 #lock-screen .lk-key:active{background:#ffffff44}
 #lock-screen .lk-bio{margin-top:22px;background:none;border:1px solid #fff8;color:#fff;border-radius:20px;padding:10px 20px;font-size:15px;cursor:pointer}
+
+/* ===== دفترِي: Enterprise mobile design system ===== */
+:root {
+  color-scheme: light;
+  --p: #16324f;
+  --g: #12836f;
+  --r: #bd4b52;
+  --bg: #f3f6fa;
+  --line: #e4eaf1;
+  --ink: #172b3d;
+  --muted: #718196;
+  --surface: #ffffff;
+  --accent: #0e8178;
+  --soft: #eaf3f4;
+}
+html, body { min-height: 100%; background: var(--bg); color: var(--ink); }
+body { font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans Arabic", sans-serif; }
+#app {
+  width: 100%;
+  max-width: 560px;
+  min-height: 100dvh;
+  height: 100%;
+  background: var(--bg);
+  box-shadow: 0 0 36px #16324f0d;
+}
+header {
+  position: relative;
+  z-index: 3;
+  min-height: calc(62px + env(safe-area-inset-top));
+  padding: env(safe-area-inset-top) 12px 0;
+  gap: 8px;
+  color: var(--ink);
+  background: rgba(255,255,255,.96);
+  border-bottom: 1px solid var(--line);
+  box-shadow: 0 2px 10px #16324f08;
+}
+header h1 { font-size: 18px; font-weight: 800; letter-spacing: -.2px; }
+header .ib {
+  width: 42px;
+  height: 42px;
+  flex: none;
+  border-radius: 13px;
+  color: var(--p);
+  background: #f1f5f9;
+  font-size: 19px;
+}
+header .ib:active { background: #e3ebf2; }
+header input {
+  color: var(--ink);
+  border-bottom-color: #cbd7e3;
+}
+header input::placeholder { color: #8b99a8; }
+main {
+  background: var(--bg);
+  padding: 2px 0 calc(22px + env(safe-area-inset-bottom));
+}
+.chips { padding: 13px 14px 9px; gap: 8px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid #dce5ed;
+  border-radius: 12px;
+  padding: 7px 14px;
+  background: #fff;
+  color: #38536c;
+  font-size: 13px;
+  font-weight: 700;
+  transition: background .16s ease, border-color .16s ease, transform .16s ease;
+}
+.chip.on { color: #fff; background: var(--p); border-color: var(--p); }
+.row {
+  margin: 8px 12px;
+  padding: 13px 12px;
+  gap: 11px;
+  min-height: 70px;
+  border: 1px solid #e7edf3;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 3px 12px #16324f08;
+}
+.row:active { background: #f8fbfd; }
+.row .nm { color: var(--ink); font-size: 15px; font-weight: 750; }
+.row .sub { color: var(--muted); font-size: 11.5px; }
+.row .plus {
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: var(--soft);
+  color: var(--accent);
+  font-size: 25px;
+  line-height: 1;
+}
+.callbtn { background: #f4f8fa; border-color: #e2eaf0; }
+.amt { color: var(--ink); font-size: 14px; font-weight: 800; }
+.up { color: var(--g) !important; }
+.dn { color: var(--r) !important; }
+footer.bar {
+  position: relative;
+  z-index: 4;
+  min-height: 62px;
+  align-items: center;
+  gap: 12px;
+  background: #fff;
+  color: var(--p);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -4px 16px #16324f08;
+  padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+  font-size: 14px;
+  font-weight: 800;
+}
+.fab {
+  z-index: 5;
+  left: 16px;
+  bottom: calc(78px + env(safe-area-inset-bottom));
+  width: 54px;
+  height: 54px;
+  border: 0;
+  border-radius: 18px;
+  background: var(--accent);
+  box-shadow: 0 7px 18px #0e81783d;
+  font-size: 28px;
+}
+.fab:active { transform: scale(.96); }
+.empty { color: var(--muted); font-size: 14px; }
+.form { padding: 18px 16px 28px; gap: 16px; }
+.form label { color: #40576d; font-size: 12px; font-weight: 750; }
+.form input, .form select {
+  min-height: 48px;
+  border: 1px solid #d9e2eb;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--ink);
+  padding: 11px 13px;
+  font-size: 15px;
+}
+.form input:focus, .form select:focus {
+  outline: 3px solid #0e81781c;
+  border-color: var(--accent);
+}
+.btns { gap: 10px; }
+.btns button { min-height: 48px; border-radius: 13px; font-size: 15px; }
+.b-up { background: var(--g); }
+.b-dn { background: var(--r); }
+.t-row {
+  margin: 8px 12px;
+  padding: 13px 12px;
+  border: 1px solid #e7edf3;
+  border-radius: 15px;
+  background: #fff;
+  box-shadow: 0 3px 12px #16324f07;
+}
+.t-row .amt2 { color: var(--ink); font-size: 14px; font-weight: 800; }
+.t-row .meta { color: var(--muted); font-size: 11px; margin-top: 3px; }
+.t-row .run { color: #50677d; font-size: 12px; font-weight: 700; }
+.rcard {
+  margin: 12px;
+  padding: 19px;
+  border: 1px solid #234865;
+  border-radius: 18px;
+  background: linear-gradient(135deg, #16324f 0%, #20546a 58%, #0e8178 100%);
+  box-shadow: 0 8px 22px #16324f20;
+}
+.rcard .val { font-size: 25px; letter-spacing: -.4px; }
+.rtable { font-size: 12.5px; }
+.rtable th { background: #eaf0f5; color: var(--p); border-bottom-color: var(--accent); }
+.rtable td { border-bottom-color: #e9eef3; }
+.badge { padding: 4px 9px; border-radius: 8px; }
+.badge.g { background: #e5f4ef; color: #14765f; }
+.badge.r { background: #fbecee; color: #b3444d; }
+.drawer {
+  width: min(88%, 340px);
+  background: #fff;
+  box-shadow: 12px 0 36px #10283d20;
+}
+.drawer .it { padding: 17px 18px; color: #29445d; font-size: 14px; border-bottom-color: #edf1f5; }
+.drawer .it:active, .sheet .it:active { background: #f0f5f8; }
+.sheet {
+  border: 1px solid #e5ebf1;
+  box-shadow: 0 -10px 40px #10283d18;
+}
+.sheet .it { color: var(--ink); font-size: 15px; font-weight: 600; }
+.ov { background: #0d2034a8; backdrop-filter: blur(3px); }
+.toast {
+  bottom: calc(90px + env(safe-area-inset-bottom));
+  background: #17354f;
+  border: 1px solid #ffffff20;
+  box-shadow: 0 6px 20px #10283d30;
+}
+.home-summary {
+  margin: 10px 12px 14px;
+  padding: 17px;
+  overflow: hidden;
+  border: 1px solid #244760;
+  border-radius: 20px;
+  color: #fff;
+  background:
+    radial-gradient(circle at 100% 0%, #ffffff19 0, transparent 42%),
+    linear-gradient(135deg, #16324f 0%, #1d4a62 62%, #0e8178 100%);
+  box-shadow: 0 9px 24px #16324f1c;
+}
+.summary-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.summary-kicker { color: #d5e3eb; font-size: 11px; font-weight: 650; }
+.summary-heading { margin-top: 3px; color: #fff; font-size: 17px; font-weight: 800; }
+.summary-currency {
+  padding: 6px 10px;
+  border: 1px solid #ffffff35;
+  border-radius: 10px;
+  background: #ffffff14;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 750;
+}
+.summary-net {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin: 18px 0 15px;
+}
+.summary-net span { color: #d5e3eb; font-size: 11px; }
+.summary-net strong { color: #fff !important; font-size: 27px; line-height: 1.25; font-weight: 850; letter-spacing: -.5px; }
+.summary-net strong small { font-size: 12px; font-weight: 650; opacity: .85; }
+.summary-stats { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; }
+.summary-stats > div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 11px 12px;
+  border: 1px solid #ffffff26;
+  border-radius: 13px;
+  background: #ffffff12;
+}
+.summary-stats span { color: #d5e3eb; font-size: 10px; }
+.summary-stats strong { color: #fff; font-size: 15px; font-weight: 800; }
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 16px 8px;
+}
+.section-title { color: var(--ink); font-size: 15px; font-weight: 850; }
+.section-caption { margin-top: 3px; color: var(--muted); font-size: 10px; }
+.count-pill {
+  min-width: 32px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
+  border: 1px solid #dce6ed;
+  border-radius: 10px;
+  background: #fff;
+  color: var(--p);
+  font-size: 12px;
+  font-weight: 800;
+}
+#lock-screen {
+  background: radial-gradient(circle at 80% 10%, #ffffff20, transparent 34%), linear-gradient(145deg, #16324f, #0e8178);
+}
+#lock-screen .lk-key {
+  border: 1px solid #ffffff35;
+  border-radius: 17px;
+  background: #ffffff18;
+}
+#lock-screen .lk-key:active { background: #ffffff35; }
+#lock-screen .lk-bio { border-radius: 12px; }
+:focus-visible { outline: 3px solid #0e817855; outline-offset: 2px; }
+@media (max-width: 360px) {
+  .home-summary { margin: 8px 9px 12px; padding: 14px; }
+  .summary-net strong { font-size: 24px; }
+  .row { margin-inline: 9px; padding-inline: 9px; gap: 8px; }
+  .amt { font-size: 12.5px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; }
+}
 </style>
 </head>
 <body>
@@ -244,7 +523,7 @@ function drawer() {
     ['🔒  قفل التطبيق', () => go('lock')],
     ['⬆️  حفظ نسخة احتياطية', backup],
     ['⬇️  استرجاع قاعدة البيانات', restore],
-    ['ℹ️  حول البرنامج', () => alert('تطبيق بشار المحاسبي\nدفتر ديون محلي: بياناتك محفوظة في هذا الجوال فقط، ولا تُرسل إلى أي مكان.\nاحرص على حفظ نسخة احتياطية من وقت لآخر.')]
+    ['ℹ️  حول البرنامج', () => alert('دفترِي\nدفتر ديون محلي: بياناتك محفوظة في هذا الجوال فقط، ولا تُرسل إلى أي مكان.\nاحرص على حفظ نسخة احتياطية من وقت لآخر.')]
   ];
   items.forEach(([l, fn]) => { const i = document.createElement('div'); i.className = 'it'; i.textContent = l; i.onclick = () => { ov.remove(); fn(); }; d.appendChild(i); });
   ov.appendChild(d); ov.onclick = e => { if (e.target === ov) ov.remove(); };
@@ -264,6 +543,8 @@ function renderHome() {
   let forMe = 0, onMe = 0;
   for (const o of m.values()) { if (o.bal > 0) forMe += o.bal; else onMe -= o.bal; }
   const q = UI.q.trim();
+  const netBalance = forMe - onMe;
+  const currencyName = cur(UI.curId).name;
   const od = getOdDays();
   const rows = [...m.entries()].map(([id, o]) => ({a: acc(id), ...o, days: daysSince(o.last)}))
     .filter(r => r.a && (!q || r.a.name.includes(q)))
@@ -271,11 +552,29 @@ function renderHome() {
   app.innerHTML = `
   <header>
     <button class="ib" onclick="drawer()">☰</button>
-    ${UI.search ? `<input id="q" placeholder="بحث بالاسم" value="${esc(UI.q)}" oninput="UI.q=this.value;render(true)">` : '<h1>تطبيق بشار المحاسبي</h1>'}
+    ${UI.search ? `<input id="q" placeholder="بحث بالاسم" value="${esc(UI.q)}" oninput="UI.q=this.value;render(true)">` : '<h1>دفترِي</h1>'}
     <button class="ib" onclick="toggleSearch()">${UI.search ? '✕' : '🔍'}</button>
   </header>
   <main>
     ${chipsHtml(UI.curId, 'setHomeCur')}
+    <section class="home-summary" aria-label="ملخص الأرصدة">
+      <div class="summary-top">
+        <div><div class="summary-kicker">ملخص مالي</div><div class="summary-heading">نظرة عامة</div></div>
+        <div class="summary-currency">${esc(currencyName)}</div>
+      </div>
+      <div class="summary-net">
+        <span>صافي الرصيد</span>
+        <strong class="${netBalance >= 0 ? 'up' : 'dn'}">${fmt(Math.abs(netBalance))} <small>${netBalance >= 0 ? 'لك' : 'عليك'}</small></strong>
+      </div>
+      <div class="summary-stats">
+        <div><span>مستحق لك</span><strong>${fmt(forMe)}</strong></div>
+        <div><span>مستحق عليك</span><strong>${fmt(onMe)}</strong></div>
+      </div>
+    </section>
+    <div class="section-heading">
+      <div><div class="section-title">الحسابات</div><div class="section-caption">الأرصدة المسجلة في هذه العملة</div></div>
+      <span class="count-pill">${rows.length}</span>
+    </div>
     ${rows.length ? rows.map(r => `
       <div class="row" onclick="openAccount(${r.a.id})">
         <button class="plus" onclick="event.stopPropagation();addFor(${r.a.id})">+</button>
@@ -761,7 +1060,7 @@ function nowStr() {
   return fdate(today()) + ' — ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 function letterhead(title, sub) {
-  return `<div class="phead"><div class="logo">📒 تطبيق بشار المحاسبي<span>دفتر ديون محلي</span></div><div class="meta">تاريخ الإصدار<br>${nowStr()}</div></div>
+  return `<div class="phead"><div class="logo">📒 دفترِي<span>دفتر ديون محلي</span></div><div class="meta">تاريخ الإصدار<br>${nowStr()}</div></div>
     <div class="ptitle">${esc(title)}</div>${sub ? `<div class="psub">${esc(sub)}</div>` : ''}`;
 }
 function statBox(items) {
@@ -770,7 +1069,7 @@ function statBox(items) {
 function doPrint(docTitle, bodyHtml) {
   let area = document.getElementById('print-area');
   if (!area) { area = document.createElement('div'); area.id = 'print-area'; document.body.appendChild(area); }
-  area.innerHTML = bodyHtml + `<div class="pfoot">تطبيق بشار المحاسبي — دفتر ديون محلي · بياناتك محفوظة في جهازك فقط · ${nowStr()}</div>`;
+  area.innerHTML = bodyHtml + `<div class="pfoot">دفترِي — دفتر ديون محلي · بياناتك محفوظة في جهازك فقط · ${nowStr()}</div>`;
   const prevTitle = document.title;
   document.title = docTitle;
   const restore = () => { document.title = prevTitle; window.removeEventListener('afterprint', restore); };
@@ -805,7 +1104,7 @@ function printAccountStatement(accId) {
       <tfoot><tr><td colspan="5">الرصيد النهائي (${esc(c.name)})</td><td class="num ${run >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(run))} ${run >= 0 ? '▲' : '▼'}</td></tr></tfoot>
       </table></div>`;
   });
-  doPrint('كشف حساب - ' + a.name + ' - تطبيق بشار المحاسبي', body);
+  doPrint('كشف حساب - ' + a.name + ' - دفترِي', body);
 }
 const REPORT_LABELS = {totals: 'إجمالي المبالغ', monthly: 'إجمالي شهرياً', details: 'تفاصيل كل المبالغ', categories: 'إجمالي التصنيفات'};
 function printCurrentReport() {
@@ -844,7 +1143,7 @@ function printCurrentReport() {
         <td class="num ${r.net >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(r.net))} ${r.net >= 0 ? '▲' : '▼'}</td></tr>`).join('')}</tbody></table>`
       : '<div class="psub">لا توجد بيانات.</div>';
   }
-  doPrint('تقرير ' + REPORT_LABELS[type] + ' - تطبيق بشار المحاسبي', body);
+  doPrint('تقرير ' + REPORT_LABELS[type] + ' - دفترِي', body);
 }
 
 /* ============ قفل التطبيق (PIN / بصمة) ============ */
@@ -875,7 +1174,7 @@ function showLockScreen(onUnlock) {
   let pin = '';
   function draw(msg) {
     lockEl.innerHTML = `<div class="lk-wrap">
-      <div class="lk-logo">📒 تطبيق بشار المحاسبي</div>
+      <div class="lk-logo">📒 دفترِي</div>
       <div class="lk-sub">${msg ? `<span class="lk-err">${esc(msg)}</span>` : 'أدخل رمز القفل'}</div>
       <div class="lk-dots">${[0, 1, 2, 3].map(i => `<span class="lk-dot ${i < pin.length ? 'on' : ''}"></span>`).join('')}</div>
       ${pinPad()}
@@ -949,8 +1248,8 @@ async function enrollBio() {
     const cfg = getLockCfg();
     const cred = await navigator.credentials.create({publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp: {name: 'تطبيق بشار المحاسبي'},
-      user: {id: crypto.getRandomValues(new Uint8Array(16)), name: 'daftari-user', displayName: 'تطبيق بشار المحاسبي'},
+      rp: {name: 'دفترِي'},
+      user: {id: crypto.getRandomValues(new Uint8Array(16)), name: 'daftari-user', displayName: 'دفترِي'},
       pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],
       authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required'},
       timeout: 30000
@@ -1053,7 +1352,7 @@ async function backup() {
   const name = `daftari_${today()}.json`;
   const file = new File([blob], name, {type: 'application/json'});
   try {
-    if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: 'نسخة احتياطية - تطبيق بشار المحاسبي'}); markBackedUp(); return; }
+    if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: 'نسخة احتياطية - دفترِي'}); markBackedUp(); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000); markBackedUp(); toast('تم حفظ النسخة الاحتياطية');
