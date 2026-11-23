@@ -8,7 +8,7 @@ const start = html.indexOf('function validateBackup(d) {');
 const end = html.indexOf('\nfunction replaceAllData(d)', start);
 assert.notEqual(start, -1, 'validateBackup must exist in index.html');
 assert.notEqual(end, -1, 'validateBackup boundary must exist in index.html');
-const validateBackup = vm.runInNewContext(\`\${html.slice(start, end)}\nvalidateBackup\`, {});
+const validateBackup = vm.runInNewContext(html.slice(start, end) + '\nvalidateBackup', {});
 
 function validBackup() {
   return {
