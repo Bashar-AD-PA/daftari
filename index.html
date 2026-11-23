@@ -7,7 +7,7 @@
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="icon-192.png">
-<title>دفتري</title>
+<title>تطبيق بشار المحاسبي</title>
 <style>
 :root{--p:#3F51B5;--g:#2e7d32;--r:#c62828;--bg:#fafafa;--line:#e0e0e0}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -26,6 +26,7 @@ main{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch}
 .row{display:flex;align-items:center;gap:10px;padding:12px 12px;border-bottom:1px solid var(--line);cursor:pointer}
 .row:active{background:#f0f0f5}
 .row .plus{font-size:30px;color:var(--p);width:44px;text-align:center;line-height:1;border:0;background:none;cursor:pointer}
+.callbtn{font-size:19px;width:38px;height:38px;flex:none;border:1px solid var(--line);border-radius:50%;background:#f4f6ff;text-align:center;line-height:36px;cursor:pointer;padding:0}
 .row .mid{flex:1;min-width:0}
 .row .nm{font-size:17px}
 .row .sub{font-size:12px;color:#757575;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -186,6 +187,7 @@ function sums(curId) {
 /* ============ التنقل ============ */
 const UI = {view: 'home', curId: null, q: '', search: false, accId: null, accCur: null, aq: '', asearch: false, edit: null, addName: '', addCur: null,
   reportType: 'totals', reportCur: null, rq: '',
+  odCur: null, odDays: null,
   reportSort: {totals: {key: 'bal', dir: 'desc'}, monthly: {key: 'month', dir: 'desc'}, details: {key: 'date', dir: 'desc'}, categories: {key: 'net', dir: 'desc'}}};
 function go(view, patch = {}) {
   Object.assign(UI, patch, {view});
@@ -221,10 +223,11 @@ function drawer() {
     ['📊  تقرير: تفاصيل كل المبالغ', () => go('reports', {reportType: 'details', reportCur: UI.curId})],
     ['📊  تقرير: إجمالي شهرياً', () => go('reports', {reportType: 'monthly', reportCur: UI.curId})],
     ['📊  تقرير: إجمالي التصنيفات', () => go('reports', {reportType: 'categories', reportCur: UI.curId})],
+    ['⏰  الديون المتأخرة', () => go('overdue', {odCur: UI.curId, odDays: getOdDays()})],
     ['🔒  قفل التطبيق', () => go('lock')],
     ['⬆️  حفظ نسخة احتياطية', backup],
     ['⬇️  استرجاع قاعدة البيانات', restore],
-    ['ℹ️  حول البرنامج', () => alert('دفتري\nدفتر ديون محلي: بياناتك محفوظة في هذا الجوال فقط، ولا تُرسل إلى أي مكان.\nاحرص على حفظ نسخة احتياطية من وقت لآخر.')]
+    ['ℹ️  حول البرنامج', () => alert('تطبيق بشار المحاسبي\nدفتر ديون محلي: بياناتك محفوظة في هذا الجوال فقط، ولا تُرسل إلى أي مكان.\nاحرص على حفظ نسخة احتياطية من وقت لآخر.')]
   ];
   items.forEach(([l, fn]) => { const i = document.createElement('div'); i.className = 'it'; i.textContent = l; i.onclick = () => { ov.remove(); fn(); }; d.appendChild(i); });
   ov.appendChild(d); ov.onclick = e => { if (e.target === ov) ov.remove(); };
@@ -244,13 +247,14 @@ function renderHome() {
   let forMe = 0, onMe = 0;
   for (const o of m.values()) { if (o.bal > 0) forMe += o.bal; else onMe -= o.bal; }
   const q = UI.q.trim();
-  const rows = [...m.entries()].map(([id, o]) => ({a: acc(id), ...o}))
+  const od = getOdDays();
+  const rows = [...m.entries()].map(([id, o]) => ({a: acc(id), ...o, days: daysSince(o.last)}))
     .filter(r => r.a && (!q || r.a.name.includes(q)))
     .sort((x, y) => x.a.name.localeCompare(y.a.name, 'ar'));
   app.innerHTML = `
   <header>
     <button class="ib" onclick="drawer()">☰</button>
-    ${UI.search ? `<input id="q" placeholder="بحث بالاسم" value="${esc(UI.q)}" oninput="UI.q=this.value;render(true)">` : '<h1>دفتري</h1>'}
+    ${UI.search ? `<input id="q" placeholder="بحث بالاسم" value="${esc(UI.q)}" oninput="UI.q=this.value;render(true)">` : '<h1>تطبيق بشار المحاسبي</h1>'}
     <button class="ib" onclick="toggleSearch()">${UI.search ? '✕' : '🔍'}</button>
   </header>
   <main>
@@ -258,7 +262,8 @@ function renderHome() {
     ${rows.length ? rows.map(r => `
       <div class="row" onclick="openAccount(${r.a.id})">
         <button class="plus" onclick="event.stopPropagation();addFor(${r.a.id})">+</button>
-        <div class="mid"><div class="nm">${esc(r.a.name)}</div><div class="sub">${r.cnt} عملية</div></div>
+        <div class="mid"><div class="nm">${esc(r.a.name)}</div><div class="sub">${r.cnt} عملية${r.bal !== 0 && r.days >= od ? ` · <b style="color:var(--r)">متأخر ${r.days} يوم</b>` : ''}</div></div>
+        ${r.a.phone ? `<button class="callbtn" title="اتصال بـ ${esc(r.a.phone)}" onclick="event.stopPropagation();callAcc(${r.a.id})">📞</button>` : ''}
         <div class="amt ${r.bal >= 0 ? 'up' : 'dn'}">${fmt(Math.abs(r.bal))} ${r.bal >= 0 ? '▲' : '▼'}</div>
       </div>`).join('') : `<div class="empty">لا توجد حسابات بهذه العملة.<br>اضغط (+) لإضافة مبلغ.</div>`}
   </main>
@@ -268,6 +273,7 @@ function renderHome() {
 }
 function toggleSearch() { UI.search = !UI.search; if (!UI.search) UI.q = ''; render(); }
 function addFor(id) { go('add', {edit: null, addName: acc(id).name, addCur: UI.curId}); }
+function callAcc(id) { const p = (acc(id) || {}).phone; if (p) location.href = 'tel:' + p; }
 function openAccount(id) { go('account', {accId: id, accCur: UI.curId, aq: '', asearch: false}); }
 
 /* ============ كشف الحساب ============ */
@@ -331,9 +337,12 @@ function showPhoto(src) {
   ov.onclick = () => ov.remove(); document.body.appendChild(ov);
 }
 function accMenu() {
+  const a = acc(UI.accId);
   sheet([
     ['🖨️ تصدير PDF (كل العملات والتفاصيل)', () => printAccountStatement(UI.accId)],
     ['مشاركة كشف الحساب', shareStatement],
+    ...(a.phone ? [[`📞 اتصال (${a.phone})`, () => callAcc(UI.accId)]] : []),
+    [a.phone ? 'تعديل رقم الهاتف' : 'إضافة رقم هاتف', editPhone],
     ['تعديل الاسم', renameAccount],
     ['إغلاق الرصيد', closeBalance],
     ['حذف الحساب', deleteAccount]
@@ -360,6 +369,14 @@ async function renameAccount() {
   if (!n || n === a.name) return;
   if (S.accounts.some(x => x.name === n)) { toast('الاسم مستخدم مسبقاً'); return; }
   a.name = n; await dbPut('accounts', a); await load(); render();
+}
+async function editPhone() {
+  const a = acc(UI.accId);
+  const p = (prompt('رقم الهاتف (اتركه فارغاً لإزالته)', a.phone || '') || '').replace(/[^0-9+]/g, '');
+  if (p === (a.phone || '')) return;
+  if (p) a.phone = p; else delete a.phone;
+  await dbPut('accounts', a); await load(); render();
+  toast(p ? 'تم حفظ رقم الهاتف' : 'تمت إزالة رقم الهاتف');
 }
 async function closeBalance() {
   const all = accTxs(UI.accId, UI.accCur);
@@ -394,6 +411,7 @@ function renderAdd() {
   const e = UI.edit ? S.txs.find(t => t.id == UI.edit) : null;
   const f = {
     name: e ? (acc(e.account_id) || {}).name : (UI.addName || ''),
+    phone: e ? ((acc(e.account_id) || {}).phone || '') : '',
     amount: e ? e.amount : '', details: e ? (e.details || '') : '', date: e ? e.date : today(),
     cur: e ? e.currency_id : (UI.addCur || defaultCur()), cat: e && e.category_id ? e.category_id : '', photo: e ? e.photo : null
   };
@@ -401,6 +419,7 @@ function renderAdd() {
   <header><button class="ib" onclick="back()">→</button><h1>${e ? 'تعديل عملية' : 'إضافة مبلغ'}</h1></header>
   <main><div class="form">
     <div><label>الاسم</label><input id="f-name" list="names" value="${esc(f.name)}" autocomplete="off"><datalist id="names">${S.accounts.map(a => `<option value="${esc(a.name)}">`).join('')}</datalist></div>
+    <div><label>رقم الهاتف (اختياري — للاتصال المباشر)</label><input id="f-phone" inputmode="tel" dir="ltr" style="text-align:left" placeholder="77XXXXXXXX" value="${esc(f.phone)}"></div>
     <div><label>المبلغ</label><input id="f-amt" inputmode="decimal" value="${esc(f.amount)}"></div>
     <div><label>التفاصيل</label><input id="f-det" value="${esc(f.details)}"></div>
     <div><label>التاريخ</label><input id="f-date" type="date" value="${f.date}"></div>
@@ -430,12 +449,18 @@ function renderAdd() {
   document.getElementById('i-cam').onchange = onFile; document.getElementById('i-gal').onchange = onFile;
   document.getElementById('b-cam').onclick = () => document.getElementById('i-cam').click();
   document.getElementById('b-gal').onclick = () => document.getElementById('i-gal').click();
+  document.getElementById('f-name').addEventListener('input', ev => {
+    const m = S.accounts.find(x => x.name === ev.target.value.trim());
+    if (m && m.phone) { f.phone = m.phone; document.getElementById('f-phone').value = m.phone; }
+  });
   const save = async type => {
     const name = document.getElementById('f-name').value.trim();
+    const phone = document.getElementById('f-phone').value.replace(/[^0-9+]/g, '');
     const amount = parseFloat(toEn(document.getElementById('f-amt').value));
     if (!name || !(amount > 0) || !f.cur) { toast('أدخل الاسم ومبلغاً صحيحاً'); return; }
     let a = S.accounts.find(x => x.name === name);
-    if (!a) { const id = await dbPut('accounts', {name, created_at: new Date().toISOString()}); a = {id, name}; }
+    if (!a) { const id = await dbPut('accounts', {name, phone: phone || undefined, created_at: new Date().toISOString()}); a = {id, name}; }
+    else if (phone && phone !== (a.phone || '')) { a.phone = phone; await dbPut('accounts', a); }
     const cat = document.getElementById('f-cat').value;
     const rec = {account_id: a.id, currency_id: f.cur, category_id: cat ? +cat : null, amount, type,
       details: document.getElementById('f-det').value.trim(), photo: f.photo, date: document.getElementById('f-date').value || today(),
@@ -670,13 +695,55 @@ function renderReports() {
   if (type === 'details') { const i = document.getElementById('rq'); if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }
 }
 
+/* ============ الديون المتأخرة ============ */
+const OD_KEY = 'daftari_od_days';
+function getOdDays() { const d = parseInt(localStorage.getItem(OD_KEY), 10); return d > 0 ? d : 30; }
+function setOdDays(d) { try { localStorage.setItem(OD_KEY, String(d)); } catch {} }
+function overdueRows(curId, days) {
+  const rows = [];
+  for (const [id, o] of sums(curId).entries()) {
+    const a = acc(id);
+    if (!a || o.bal === 0) continue;
+    const d = daysSince(o.last);
+    if (d >= days) rows.push({a, bal: o.bal, cnt: o.cnt, days: d, last: o.last});
+  }
+  return rows.sort((x, y) => y.days - x.days);
+}
+function setOdCur(id) { UI.odCur = id; render(); }
+function setOdDaysUI(d) { UI.odDays = d; setOdDays(d); render(); }
+function renderOverdue() {
+  if (UI.odCur == null || !cur(UI.odCur)) UI.odCur = (UI.curId && cur(UI.curId)) ? UI.curId : defaultCur();
+  const curId = UI.odCur, days = UI.odDays || getOdDays();
+  const rows = overdueRows(curId, days);
+  const cname = cur(curId).name;
+  const forMe = rows.filter(r => r.bal > 0).reduce((s, r) => s + r.bal, 0);
+  const onMe = rows.filter(r => r.bal < 0).reduce((s, r) => s - r.bal, 0);
+  app.innerHTML = `
+  <header><button class="ib" onclick="back()">→</button><h1>الديون المتأخرة</h1></header>
+  <main>
+    <div class="chips" style="padding-bottom:2px">${[15, 30, 60, 90, 180].map(d => `<div class="chip ${d === days ? 'on' : ''}" onclick="setOdDaysUI(${d})">منذ ${d} يوم</div>`).join('')}</div>
+    ${chipsHtml(curId, 'setOdCur')}
+    <div class="empty small" style="padding:4px 20px 10px;text-align:right">حسابات لها رصيد مفتوح (${cname}) دون أي عملية منذ ${days} يوماً فأكثر.</div>
+    ${rows.length ? rows.map(r => `
+      <div class="row" onclick="openAccount(${r.a.id})">
+        <div class="mid"><div class="nm">${esc(r.a.name)}</div><div class="sub">آخر عملية: ${fdate(r.last)} · ${r.cnt} عملية</div></div>
+        ${r.a.phone ? `<button class="callbtn" title="اتصال بـ ${esc(r.a.phone)}" onclick="event.stopPropagation();callAcc(${r.a.id})">📞</button>` : ''}
+        <div style="text-align:left">
+          <div class="amt ${r.bal >= 0 ? 'up' : 'dn'}">${fmt(Math.abs(r.bal))} ${r.bal >= 0 ? '▲' : '▼'}</div>
+          <div class="badge r" style="margin-top:4px">${r.days} يوم</div>
+        </div>
+      </div>`).join('') : `<div class="empty">لا توجد ديون متأخرة 👍<br>كل الحسابات نشطة خلال آخر ${days} يوماً.</div>`}
+  </main>
+  <footer class="bar"><span>لك متأخر: ${fmt(forMe)}</span><span>عليك متأخر: ${fmt(onMe)}</span></footer>`;
+}
+
 /* ============ تصدير PDF (عبر طباعة المتصفح) ============ */
 function nowStr() {
   const d = new Date();
   return fdate(today()) + ' — ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 function letterhead(title, sub) {
-  return `<div class="phead"><div class="logo">📒 دفتري<span>دفتر ديون محلي</span></div><div class="meta">تاريخ الإصدار<br>${nowStr()}</div></div>
+  return `<div class="phead"><div class="logo">📒 تطبيق بشار المحاسبي<span>دفتر ديون محلي</span></div><div class="meta">تاريخ الإصدار<br>${nowStr()}</div></div>
     <div class="ptitle">${esc(title)}</div>${sub ? `<div class="psub">${esc(sub)}</div>` : ''}`;
 }
 function statBox(items) {
@@ -685,7 +752,7 @@ function statBox(items) {
 function doPrint(docTitle, bodyHtml) {
   let area = document.getElementById('print-area');
   if (!area) { area = document.createElement('div'); area.id = 'print-area'; document.body.appendChild(area); }
-  area.innerHTML = bodyHtml + `<div class="pfoot">دفتري — دفتر ديون محلي · بياناتك محفوظة في جهازك فقط · ${nowStr()}</div>`;
+  area.innerHTML = bodyHtml + `<div class="pfoot">تطبيق بشار المحاسبي — دفتر ديون محلي · بياناتك محفوظة في جهازك فقط · ${nowStr()}</div>`;
   const prevTitle = document.title;
   document.title = docTitle;
   const restore = () => { document.title = prevTitle; window.removeEventListener('afterprint', restore); };
@@ -720,7 +787,7 @@ function printAccountStatement(accId) {
       <tfoot><tr><td colspan="5">الرصيد النهائي (${esc(c.name)})</td><td class="num ${run >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(run))} ${run >= 0 ? '▲' : '▼'}</td></tr></tfoot>
       </table></div>`;
   });
-  doPrint('كشف حساب - ' + a.name + ' - دفتري', body);
+  doPrint('كشف حساب - ' + a.name + ' - تطبيق بشار المحاسبي', body);
 }
 const REPORT_LABELS = {totals: 'إجمالي المبالغ', monthly: 'إجمالي شهرياً', details: 'تفاصيل كل المبالغ', categories: 'إجمالي التصنيفات'};
 function printCurrentReport() {
@@ -759,7 +826,7 @@ function printCurrentReport() {
         <td class="num ${r.net >= 0 ? 'pup' : 'pdn'}">${fmt(Math.abs(r.net))} ${r.net >= 0 ? '▲' : '▼'}</td></tr>`).join('')}</tbody></table>`
       : '<div class="psub">لا توجد بيانات.</div>';
   }
-  doPrint('تقرير ' + REPORT_LABELS[type] + ' - دفتري', body);
+  doPrint('تقرير ' + REPORT_LABELS[type] + ' - تطبيق بشار المحاسبي', body);
 }
 
 /* ============ قفل التطبيق (PIN / بصمة) ============ */
@@ -790,7 +857,7 @@ function showLockScreen(onUnlock) {
   let pin = '';
   function draw(msg) {
     lockEl.innerHTML = `<div class="lk-wrap">
-      <div class="lk-logo">📒 دفتري</div>
+      <div class="lk-logo">📒 تطبيق بشار المحاسبي</div>
       <div class="lk-sub">${msg ? `<span class="lk-err">${esc(msg)}</span>` : 'أدخل رمز القفل'}</div>
       <div class="lk-dots">${[0, 1, 2, 3].map(i => `<span class="lk-dot ${i < pin.length ? 'on' : ''}"></span>`).join('')}</div>
       ${pinPad()}
@@ -864,8 +931,8 @@ async function enrollBio() {
     const cfg = getLockCfg();
     const cred = await navigator.credentials.create({publicKey: {
       challenge: crypto.getRandomValues(new Uint8Array(32)),
-      rp: {name: 'دفتري'},
-      user: {id: crypto.getRandomValues(new Uint8Array(16)), name: 'daftari-user', displayName: 'دفتري'},
+      rp: {name: 'تطبيق بشار المحاسبي'},
+      user: {id: crypto.getRandomValues(new Uint8Array(16)), name: 'daftari-user', displayName: 'تطبيق بشار المحاسبي'},
       pubKeyCredParams: [{type: 'public-key', alg: -7}, {type: 'public-key', alg: -257}],
       authenticatorSelection: {authenticatorAttachment: 'platform', userVerification: 'required'},
       timeout: 30000
@@ -968,7 +1035,7 @@ async function backup() {
   const name = `daftari_${today()}.json`;
   const file = new File([blob], name, {type: 'application/json'});
   try {
-    if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: 'نسخة احتياطية - دفتري'}); markBackedUp(); return; }
+    if (navigator.canShare && navigator.canShare({files: [file]})) { await navigator.share({files: [file], title: 'نسخة احتياطية - تطبيق بشار المحاسبي'}); markBackedUp(); return; }
   } catch (e) { if (e && e.name === 'AbortError') return; }
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000); markBackedUp(); toast('تم حفظ النسخة الاحتياطية');
@@ -999,6 +1066,7 @@ function render(keepFocus) {
     case 'currencies': return renderCurrencies();
     case 'categories': return renderCategories();
     case 'reports': return renderReports();
+    case 'overdue': return renderOverdue();
     case 'lock': return renderLock();
     default: return renderHome();
   }
