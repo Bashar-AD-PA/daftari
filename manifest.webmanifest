@@ -1,17 +1,27 @@
 {
-  "name": "تطبيق بشار المحاسبي",
-  "short_name": "بشار المحاسبي",
-  "description": "دفتر ديون محلي بلا إنترنت",
+  "name": "دفترِي – نظام محاسبي محلي",
+  "short_name": "دفترِي",
+  "description": "دفتر حسابات محلي يعمل دون إنترنت",
   "lang": "ar",
   "dir": "rtl",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
   "orientation": "portrait",
-  "background_color": "#ffffff",
-  "theme_color": "#3F51B5",
+  "background_color": "#F3F6FA",
+  "theme_color": "#16324F",
   "icons": [
-    {"src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
-    {"src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
   ]
 }
