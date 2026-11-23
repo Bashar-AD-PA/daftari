@@ -456,8 +456,9 @@ function renderAdd() {
   const save = async type => {
     const name = document.getElementById('f-name').value.trim();
     const phone = document.getElementById('f-phone').value.replace(/[^0-9+]/g, '');
-    const amount = parseFloat(toEn(document.getElementById('f-amt').value));
-    if (!name || !(amount > 0) || !f.cur) { toast('أدخل الاسم ومبلغاً صحيحاً'); return; }
+    const amountText = toEn(document.getElementById('f-amt').value);
+    const amount = amountText ? Number(amountText) : NaN;
+    if (!name || !Number.isFinite(amount) || amount <= 0 || amount > Number.MAX_SAFE_INTEGER || !f.cur) { toast('أدخل الاسم ومبلغاً صحيحاً'); return; }
     let a = S.accounts.find(x => x.name === name);
     if (!a) { const id = await dbPut('accounts', {name, phone: phone || undefined, created_at: new Date().toISOString()}); a = {id, name}; }
     else if (phone && phone !== (a.phone || '')) { a.phone = phone; await dbPut('accounts', a); }
@@ -1040,6 +1041,44 @@ async function backup() {
   const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; a.click();
   setTimeout(() => URL.revokeObjectURL(a.href), 4000); markBackedUp(); toast('تم حفظ النسخة الاحتياطية');
 }
+function validateBackup(d) {
+  if (!d || d.app !== 'daftari' || d.version !== 1) throw new Error('نسخة غير مدعومة');
+  for (const key of ['currencies', 'accounts', 'categories', 'transactions']) {
+    if (!Array.isArray(d[key])) throw new Error('بيانات ناقصة');
+  }
+  const ids = {};
+  for (const key of ['currencies', 'accounts', 'categories']) {
+    ids[key] = new Set();
+    for (const item of d[key]) {
+      if (!item || !Number.isSafeInteger(item.id) || item.id <= 0 || ids[key].has(item.id) || typeof item.name !== 'string' || !item.name.trim()) throw new Error('سجل غير صالح');
+      ids[key].add(item.id);
+    }
+  }
+  if (!d.currencies.length) throw new Error('لا توجد عملات');
+  for (const t of d.transactions) {
+    if (!t || !Number.isSafeInteger(t.id) || t.id <= 0 ||
+        !ids.accounts.has(t.account_id) || !ids.currencies.has(t.currency_id) ||
+        (t.category_id != null && !ids.categories.has(t.category_id)) ||
+        !Number.isFinite(t.amount) || t.amount <= 0 || t.amount > Number.MAX_SAFE_INTEGER ||
+        (t.type !== 1 && t.type !== -1) ||
+        typeof t.date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(t.date) ||
+        Number.isNaN(new Date(t.date + 'T00:00:00').getTime())) throw new Error('عملية غير صالحة');
+    if (t.photo != null && typeof t.photo !== 'string') throw new Error('مرفق غير صالح');
+  }
+}
+function replaceAllData(d) {
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORES, 'readwrite');
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error || new Error('تعذّر حفظ البيانات'));
+    tx.onabort = () => reject(tx.error || new Error('تم إلغاء الاستعادة'));
+    for (const store of STORES) {
+      const os = tx.objectStore(store);
+      os.clear();
+      for (const item of d[store]) os.put(item);
+    }
+  });
+}
 function restore() {
   if (!confirm('سيتم استبدال كل البيانات الحالية بالنسخة المختارة. يُفضّل حفظ نسخة احتياطية أولاً. متابعة؟')) return;
   const i = document.createElement('input'); i.type = 'file'; i.accept = '.json,application/json';
@@ -1047,13 +1086,10 @@ function restore() {
     const f = i.files[0]; if (!f) return;
     try {
       const d = JSON.parse(await f.text());
-      if (d.app !== 'daftari' || !Array.isArray(d.transactions)) throw new Error('bad');
-      const safety = {currencies: S.currencies, accounts: S.accounts, categories: S.categories, transactions: S.txs};
-      try { localStorage.setItem('daftari_before_restore', JSON.stringify(safety)); } catch (e) { /* قد تكون الصور كبيرة */ }
-      for (const s of STORES) await dbClear(s);
-      for (const s of STORES) for (const o of (d[s] || [])) await dbPut(s, o);
-      await seed(); await load(); UI.curId = null; go('home'); toast('تم استرجاع البيانات');
-    } catch (e) { toast('ملف غير صالح'); }
+      validateBackup(d);
+      await replaceAllData(d);
+      await load(); UI.curId = null; go('home'); toast('تم استرجاع البيانات');
+    } catch (e) { console.error('Restore failed:', e); toast('تعذّر الاسترجاع: الملف غير صالح أو تعذّر حفظه'); }
   };
   i.click();
 }
