@@ -1079,11 +1079,11 @@ function validateBackup(d) {
         (t.category_id != null && !ids.categories.has(t.category_id)) ||
         !Number.isFinite(t.amount) || t.amount <= 0 || t.amount > Number.MAX_SAFE_INTEGER ||
         (t.type !== 1 && t.type !== -1) ||
-        typeof t.date !== 'string' || !/^\\d{4}-\\d{2}-\\d{2}$/.test(t.date) ||
+        typeof t.date !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(t.date) ||
         Number.isNaN(new Date(t.date + 'T00:00:00Z').getTime()) ||
         new Date(t.date + 'T00:00:00Z').toISOString().slice(0, 10) !== t.date) throw new Error('عملية غير صالحة');
     txIds.add(t.id);
-    if (t.photo != null && (typeof t.photo !== 'string' || !/^data:image\\/(jpeg|png|webp);base64,[a-z0-9+/]+=*$/i.test(t.photo))) throw new Error('مرفق غير صالح');
+    if (t.photo != null && (typeof t.photo !== 'string' || !/^data:image\/(jpeg|png|webp);base64,[a-z0-9+/]+=*$/i.test(t.photo))) throw new Error('مرفق غير صالح');
   }
 }
 function replaceAllData(d) {
